@@ -1,0 +1,188 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  ADMIN
+  STUDENT
+}
+
+enum StudentStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum BillingPeriodStatus {
+  DRAFT
+  CONFIRMED
+}
+
+enum EntryType {
+  MONTHLY_FEE
+  PAYMENT
+  CREDIT
+  REFUND
+  ADJUSTMENT
+  REVERSAL
+}
+
+enum PaymentMethod {
+  CASH
+  BANK_TRANSFER
+  CHEQUE
+  ONLINE
+  OTHER
+}
+
+model User {
+  id           String   @id @default(uuid())
+  username     String   @unique
+  passwordHash String
+  role         Role
+  loginEnabled Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  student                Student?
+  auditLogs              AuditLog[]
+  feeHistoriesCreated    StudentFeeHistory[] @relation("FeeHistoryCreatedBy")
+  billingPeriodsCreated  BillingPeriod[]     @relation("BillingPeriodCreatedBy")
+  ledgerEntriesRecorded  LedgerEntry[]       @relation("LedgerRecordedBy")
+
+  @@index([username])
+  @@index([role])
+}
+
+model Student {
+  id                 String        @id @default(uuid())
+  studentId          String        @unique
+  fullName           String
+  roomNumber         String
+  phone              String?
+  email              String?
+  address            String?
+  admissionDate      DateTime
+  departureDate      DateTime?
+  status             StudentStatus @default(ACTIVE)
+  currentFeeGroupId  String?
+  currentFeeGroup    FeeGroup?     @relation(fields: [currentFeeGroupId], references: [id])
+  monthlyFee         Decimal       @db.Decimal(12, 2)
+  outstandingBalance Decimal       @default(0.00) @db.Decimal(12, 2)
+  notes              String?
+  userId             String        @unique
+  user               User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  // Relations
+  feeHistories  StudentFeeHistory[]
+  ledgerEntries LedgerEntry[]
+
+  @@index([status])
+  @@index([currentFeeGroupId])
+  @@index([studentId])
+}
+
+model FeeGroup {
+  id            String   @id @default(uuid())
+  name          String   @unique
+  monthlyAmount Decimal  @db.Decimal(12, 2)
+  description   String?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  students     Student[]
+  feeHistories StudentFeeHistory[]
+
+  @@index([isActive])
+}
+
+model StudentFeeHistory {
+  id            String    @id @default(uuid())
+  studentId     String
+  student       Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  feeGroupId    String
+  feeGroup      FeeGroup  @relation(fields: [feeGroupId], references: [id])
+  monthlyFee    Decimal   @db.Decimal(12, 2)
+  effectiveFrom DateTime
+  effectiveTo   DateTime?
+  createdAt     DateTime  @default(now())
+  createdBy     String
+  creator       User      @relation("FeeHistoryCreatedBy", fields: [createdBy], references: [id])
+
+  @@index([studentId])
+  @@index([feeGroupId])
+}
+
+model BillingPeriod {
+  id            String              @id @default(uuid())
+  year          Int
+  month         Int
+  nepaliMonth   String
+  generatedAt   DateTime            @default(now())
+  generatedBy   String
+  creator       User                @relation("BillingPeriodCreatedBy", fields: [generatedBy], references: [id])
+  totalStudents Int                 @default(0)
+  totalAmount   Decimal             @default(0.00) @db.Decimal(12, 2)
+  status        BillingPeriodStatus @default(CONFIRMED)
+
+  // Relations
+  ledgerEntries LedgerEntry[]
+
+  @@unique([year, month])
+  @@index([year, month])
+}
+
+model LedgerEntry {
+  id              String         @id @default(uuid())
+  studentId       String
+  student         Student        @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  date            DateTime
+  billingPeriodId String?
+  billingPeriod   BillingPeriod? @relation(fields: [billingPeriodId], references: [id])
+  entryType       EntryType
+  debit           Decimal        @default(0.00) @db.Decimal(12, 2)
+  credit          Decimal        @default(0.00) @db.Decimal(12, 2)
+  balanceAfter    Decimal        @db.Decimal(12, 2)
+  description     String
+  referenceNumber String?
+  receiptNumber   String?
+  paymentMethod   PaymentMethod?
+  recordedBy      String
+  recorder        User           @relation("LedgerRecordedBy", fields: [recordedBy], references: [id])
+  reversedBy      String?
+  reversedEntry   LedgerEntry?   @relation("EntryReversal", fields: [reversedBy], references: [id])
+  reversals       LedgerEntry[]  @relation("EntryReversal")
+  notes           String?
+  createdAt       DateTime       @default(now())
+
+  @@index([studentId])
+  @@index([date])
+  @@index([billingPeriodId])
+  @@index([entryType])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  action    String
+  entity    String
+  entityId  String
+  oldValue  Json?
+  newValue  Json?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([entity, entityId])
+  @@index([createdAt])
+}
