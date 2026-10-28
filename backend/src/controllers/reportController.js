@@ -107,11 +107,14 @@ async function getDashboardStats(req, res) {
     totalActiveStudents,
     totalInactiveStudents,
     studentsWithDues,
+    totalOutstanding: totalOutstandingAll.toFixed(2),
     totalOutstandingAll: totalOutstandingAll.toFixed(2),
     totalOutstandingActive: totalOutstandingActive.toFixed(2),
     totalOutstandingInactive: totalOutstandingInactive.toFixed(2),
     currentMonthCharged: currentMonthCharged.toFixed(2),
+    thisMonthCharged: currentMonthCharged.toFixed(2),
     currentMonthCollected: currentMonthCollected.toFixed(2),
+    thisMonthCollected: currentMonthCollected.toFixed(2),
     currentMonthNepali: getNepaliMonth(currentYear, currentMonth + 1),
     recentTransactions
   });
@@ -165,8 +168,11 @@ async function getMonthlySummary(req, res) {
       year,
       month,
       nepaliMonth: getNepaliMonth(year, month),
+      monthName: getNepaliMonth(year, month),
       totalCharged: totalCharged.toFixed(2),
+      charged: parseFloat(totalCharged.toFixed(2)),
       totalCollected: totalCollected.toFixed(2),
+      collected: parseFloat(totalCollected.toFixed(2)),
       netDifference: totalCharged.minus(totalCollected).toFixed(2),
       chargeCount: charges.length,
       collectionCount: collections.length

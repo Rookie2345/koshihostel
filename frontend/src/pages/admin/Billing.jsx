@@ -68,7 +68,7 @@ export default function Billing() {
 
   const { data: activeStudentsData, isLoading: isActiveStudentsLoading } = useStudents({
     status: 'ACTIVE',
-    limit: 150,
+    limit: 100,
   });
   const activeStudents = activeStudentsData?.students || (Array.isArray(activeStudentsData) ? activeStudentsData : []);
 
@@ -173,13 +173,12 @@ export default function Billing() {
 
   // Select / Deselect All Filtered Active Students
   const filteredStudents = activeStudents.filter((s) => {
-    if (!studentSearch) return true;
-    const term = studentSearch.toLowerCase();
-    return (
-      s.fullName?.toLowerCase().includes(term) ||
-      s.studentId?.toLowerCase().includes(term) ||
-      s.roomNumber?.toLowerCase().includes(term)
-    );
+    if (!studentSearch.trim()) return true;
+    const term = studentSearch.trim().toLowerCase();
+    const name = String(s.fullName || '').toLowerCase();
+    const studentId = String(s.studentId || '').toLowerCase();
+    const room = String(s.roomNumber || '').toLowerCase();
+    return name.includes(term) || studentId.includes(term) || room.includes(term);
   });
 
   const handleSelectAllFiltered = () => {

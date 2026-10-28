@@ -63,15 +63,19 @@ export default function Dashboard() {
   const activeStudents = dashboard?.totalActiveStudents ?? dashboard?.activeStudents ?? 0;
   const inactiveStudents = dashboard?.totalInactiveStudents ?? dashboard?.inactiveStudents ?? 0;
   const studentsWithDues = dashboard?.studentsWithDues ?? dashboard?.duesCount ?? 0;
-  const totalOutstanding = dashboard?.totalOutstanding ?? dashboard?.outstandingTotal ?? 0;
-  const thisMonthCharged = dashboard?.thisMonthCharged ?? dashboard?.chargedThisMonth ?? 0;
-  const thisMonthCollected = dashboard?.thisMonthCollected ?? dashboard?.collectedThisMonth ?? 0;
+  const totalOutstanding = dashboard?.totalOutstandingAll ?? dashboard?.totalOutstanding ?? dashboard?.outstandingTotal ?? 0;
+  const thisMonthCharged = dashboard?.currentMonthCharged ?? dashboard?.thisMonthCharged ?? dashboard?.chargedThisMonth ?? 0;
+  const thisMonthCollected = dashboard?.currentMonthCollected ?? dashboard?.thisMonthCollected ?? dashboard?.collectedThisMonth ?? 0;
 
   // Chart data
-  const chartData = (Array.isArray(monthlyData) ? monthlyData : monthlyData?.summary || []).map((item) => ({
-    name: item.monthName || item.month || `${item.year}-${item.month}`,
-    Charged: item.charged || 0,
-    Collected: item.collected || 0,
+  const rawSummary = Array.isArray(monthlyData)
+    ? monthlyData
+    : monthlyData?.data || monthlyData?.summary || [];
+
+  const chartData = rawSummary.map((item) => ({
+    name: item.nepaliMonth || item.monthName || (item.year && item.month ? `${item.year}-${item.month}` : item.month),
+    Charged: parseFloat(item.totalCharged || item.charged || 0),
+    Collected: parseFloat(item.totalCollected || item.collected || 0),
   }));
 
   const pieData = [
