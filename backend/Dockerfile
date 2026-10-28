@@ -11,5 +11,7 @@ RUN npm install --production
 COPY . .
 RUN npx prisma generate
 
+RUN chmod +x start.sh
+
 EXPOSE 5000
-CMD ["node", "src/server.js"]
+CMD ["./start.sh"]
