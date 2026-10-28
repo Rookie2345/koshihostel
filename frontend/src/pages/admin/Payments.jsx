@@ -18,6 +18,7 @@ import {
   X,
   AlertCircle,
   ArrowUpDown,
+  Coins,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -128,7 +129,8 @@ export default function Payments() {
         // Start of this week (Monday)
         const day = now.getDay();
         const diff = now.getDate() - day + (day === 0 ? -6 : 1);
-        const startOfWeek = new Date(now.setDate(diff));
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(diff);
         startOfWeek.setHours(0, 0, 0, 0);
 
         // Start of current month
