@@ -10,32 +10,48 @@ const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '15m';
 const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '7d';
 const BCRYPT_ROUNDS = parseInt(process.env.BCRYPT_ROUNDS, 10) || 12;
 
-/**
- * Generate Access and Refresh JWT Tokens
- */
+function buildUserSessionPayload(user) {
+  const student = user.student || null;
+
+  return {
+    id: user.id,
+    username: user.username,
+    role: user.role,
+    name: student?.fullName || user.username,
+    fullName: student?.fullName || user.username,
+    studentId: student?.id || null,
+    studentCode: student?.studentId || null,
+    roomNumber: student?.roomNumber || null,
+    status: student?.status || null,
+  };
+}
+
 function generateTokens(user) {
   const payload = {
     id: user.id,
     username: user.username,
-    role: user.role
+    role: user.role,
+    studentId: user.student?.id || null,
+    studentCode: user.student?.studentId || null,
   };
 
-  const accessToken = jwt.sign(payload, JWT_SECRET, {
-    expiresIn: JWT_EXPIRES_IN
-  });
-
-  const refreshToken = jwt.sign(payload, JWT_REFRESH_SECRET, {
-    expiresIn: JWT_REFRESH_EXPIRES_IN
-  });
+  const accessToken = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+  const refreshToken = jwt.sign(payload, JWT_REFRESH_SECRET, { expiresIn: JWT_REFRESH_EXPIRES_IN });
 
   return { accessToken, refreshToken };
 }
 
-/**
- * POST /api/auth/login
- */
 async function login(req, res) {
+  const { username, password } = req.body || {};
   const cleanUsername = String(username || '').trim();
+
+  if (!cleanUsername) {
+    return errorResponse(res, 'Username is required', 400);
+  }
+
+  if (!password) {
+    return errorResponse(res, 'Password is required', 400);
+  }
 
   const user = await prisma.user.findFirst({
     where: {
@@ -83,20 +99,10 @@ async function login(req, res) {
   return successResponse(res, {
     accessToken,
     refreshToken,
-    user: {
-      id: user.id,
-      username: user.username,
-      role: user.role,
-      studentId: user.student?.id || null,
-      studentCode: user.student?.studentId || null,
-      fullName: user.student?.fullName || user.username
-    }
+    user: buildUserSessionPayload(user),
   });
 }
 
-/**
- * POST /api/auth/refresh
- */
 async function refreshToken(req, res) {
   const { refreshToken: token } = req.body;
 
@@ -118,7 +124,9 @@ async function refreshToken(req, res) {
         select: {
           id: true,
           studentId: true,
-          fullName: true
+          fullName: true,
+          status: true,
+          roomNumber: true
         }
       }
     }
@@ -133,35 +141,19 @@ async function refreshToken(req, res) {
   return successResponse(res, {
     accessToken: newAccessToken,
     refreshToken: newRefreshToken,
-    user: {
-      id: user.id,
-      username: user.username,
-      role: user.role,
-      studentId: user.student?.id || null,
-      studentCode: user.student?.studentId || null,
-      fullName: user.student?.fullName || user.username
-    }
+    user: buildUserSessionPayload(user),
   });
 }
 
-/**
- * POST /api/auth/logout
- */
 async function logout(req, res) {
-  // Stateless JWT logout - client should discard stored tokens
   return successResponse(res, null, 200, 'Logged out successfully');
 }
 
-/**
- * POST /api/auth/change-password
- */
 async function changePassword(req, res) {
   const { currentPassword, newPassword } = req.body;
   const userId = req.user.id;
 
-  const user = await prisma.user.findUnique({
-    where: { id: userId }
-  });
+  const user = await prisma.user.findUnique({ where: { id: userId } });
 
   if (!user) {
     return errorResponse(res, 'User not found', 404);
@@ -190,9 +182,6 @@ async function changePassword(req, res) {
   return successResponse(res, null, 200, 'Password changed successfully');
 }
 
-/**
- * POST /api/auth/admin/reset-student-password
- */
 async function resetStudentPassword(req, res) {
   const { userId, newPassword } = req.body;
 
