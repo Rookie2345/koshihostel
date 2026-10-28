@@ -4,7 +4,7 @@ import {
   User, Home, Calendar, CreditCard, TrendingUp, TrendingDown,
   AlertTriangle, CheckCircle, Printer, Download, ArrowUpRight, ArrowDownLeft,
 } from 'lucide-react';
-import { getMyProfile, getMyStatement, getMyLedger } from '../../api/students';
+import studentsApi from '../../api/students';
 import { formatNPR } from '../../utils/formatCurrency';
 import { formatDate } from '../../utils/formatDate';
 import StatCard from '../../components/ui/StatCard';
@@ -36,17 +36,17 @@ export default function StudentDashboard() {
 
   const { data: profile, isLoading: profileLoading } = useQuery({
     queryKey: ['myProfile'],
-    queryFn: getMyProfile,
+    queryFn: () => studentsApi.getMyProfile(),
   });
 
   const { data: statement, isLoading: statementLoading } = useQuery({
     queryKey: ['myStatement'],
-    queryFn: getMyStatement,
+    queryFn: () => studentsApi.getMyStatement(),
   });
 
   const { data: ledgerData, isLoading: ledgerLoading } = useQuery({
     queryKey: ['myLedger', showAll],
-    queryFn: () => getMyLedger({ limit: showAll ? 1000 : 20 }),
+    queryFn: () => studentsApi.getMyLedger({ limit: showAll ? 1000 : 20 }),
   });
 
   const isLoading = profileLoading || statementLoading || ledgerLoading;

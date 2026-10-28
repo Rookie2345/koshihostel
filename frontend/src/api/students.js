@@ -66,7 +66,6 @@ export const studentsApi = {
       const res = await apiClient.get('/students/former', { params });
       return res.data?.data !== undefined ? res.data.data : res.data;
     } catch {
-      // Fallback to query students with inactive status
       const res = await apiClient.get('/students', {
         params: { ...params, status: 'INACTIVE', duesOnly: true },
       });
@@ -85,6 +84,16 @@ export const studentsApi = {
     }
   },
 
+  async getMyStatement() {
+    try {
+      const res = await apiClient.get('/me/statement');
+      return res.data?.data !== undefined ? res.data.data : res.data;
+    } catch {
+      const fallback = await apiClient.get('/me/profile');
+      return fallback.data?.data !== undefined ? fallback.data.data : fallback.data;
+    }
+  },
+
   async getMyLedger(params = {}) {
     try {
       const res = await apiClient.get('/me/ledger', { params });
@@ -95,5 +104,20 @@ export const studentsApi = {
     }
   },
 };
+
+export const getStudents = (...args) => studentsApi.getStudents(...args);
+export const getStudentById = (...args) => studentsApi.getStudentById(...args);
+export const createStudent = (...args) => studentsApi.createStudent(...args);
+export const updateStudent = (...args) => studentsApi.updateStudent(...args);
+export const activateStudent = (...args) => studentsApi.activateStudent(...args);
+export const deactivateStudent = (...args) => studentsApi.deactivateStudent(...args);
+export const updateFeeGroup = (...args) => studentsApi.updateFeeGroup(...args);
+export const resetPassword = (...args) => studentsApi.resetPassword(...args);
+export const toggleLoginAccess = (...args) => studentsApi.toggleLoginAccess(...args);
+export const getStudentLedger = (...args) => studentsApi.getStudentLedger(...args);
+export const getFormerStudents = (...args) => studentsApi.getFormerStudents(...args);
+export const getMyProfile = (...args) => studentsApi.getMyProfile(...args);
+export const getMyStatement = (...args) => studentsApi.getMyStatement(...args);
+export const getMyLedger = (...args) => studentsApi.getMyLedger(...args);
 
 export default studentsApi;
