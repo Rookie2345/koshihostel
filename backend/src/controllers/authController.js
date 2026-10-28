@@ -35,10 +35,15 @@ function generateTokens(user) {
  * POST /api/auth/login
  */
 async function login(req, res) {
-  const { username, password } = req.body;
+  const cleanUsername = String(username || '').trim();
 
-  const user = await prisma.user.findUnique({
-    where: { username },
+  const user = await prisma.user.findFirst({
+    where: {
+      OR: [
+        { username: { equals: cleanUsername, mode: 'insensitive' } },
+        { student: { studentId: { equals: cleanUsername, mode: 'insensitive' } } }
+      ]
+    },
     include: {
       student: {
         select: {
