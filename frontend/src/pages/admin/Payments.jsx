@@ -97,25 +97,24 @@ export default function Payments() {
   const payments = paymentsResponse?.payments || (Array.isArray(paymentsResponse) ? paymentsResponse : []);
   const pagination = paymentsResponse?.pagination || { total: payments.length, page: 1, totalPages: 1 };
 
-  // Query: Active Students for Autocomplete
-  const { data: studentsResponse } = useStudents({
-    limit: 200,
-    status: 'ACTIVE',
+  // Query: Students for Autocomplete / Selection (both Active & Inactive with dues)
+  const { data: studentsResponse, isLoading: isLoadingStudents } = useStudents({
+    limit: 100,
   });
   const allStudents = studentsResponse?.students || (Array.isArray(studentsResponse) ? studentsResponse : []);
 
-  // Filter students for autocomplete
+  // Filter students for autocomplete (shows all students by default!)
   const matchingStudents = useMemo(() => {
-    if (!studentSearchInput.trim()) return [];
+    if (!studentSearchInput.trim()) {
+      return allStudents;
+    }
     const term = studentSearchInput.toLowerCase();
-    return allStudents
-      .filter(
-        (s) =>
-          s.fullName?.toLowerCase().includes(term) ||
-          s.studentId?.toLowerCase().includes(term) ||
-          s.roomNumber?.toLowerCase().includes(term)
-      )
-      .slice(0, 8);
+    return allStudents.filter(
+      (s) =>
+        s.fullName?.toLowerCase().includes(term) ||
+        s.studentId?.toLowerCase().includes(term) ||
+        s.roomNumber?.toLowerCase().includes(term)
+    );
   }, [allStudents, studentSearchInput]);
 
   // Query: Collections Metric for Today, This Week, This Month
@@ -538,49 +537,76 @@ export default function Payments() {
                   <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3 pointer-events-none" />
                   <input
                     type="text"
-                    required
-                    placeholder="Type student name, student ID, or room..."
+                    placeholder="Click to select student (or type to search)..."
                     value={studentSearchInput}
                     onChange={(e) => {
                       setStudentSearchInput(e.target.value);
                       setShowStudentDropdown(true);
                     }}
                     onFocus={() => setShowStudentDropdown(true)}
-                    className="w-full pl-9 pr-3 py-2 rounded-lg bg-navy-900 border border-navy-600 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+                    className="w-full pl-9 pr-16 py-2 rounded-lg bg-navy-900 border border-navy-600 text-sm text-slate-100 placeholder-slate-400 focus:outline-none focus:border-cyan-500 cursor-pointer"
                   />
+                  {showStudentDropdown && (
+                    <button
+                      type="button"
+                      onClick={() => setShowStudentDropdown(false)}
+                      className="absolute right-2.5 top-2.5 text-xs text-slate-400 hover:text-slate-200 bg-navy-800 px-2 py-0.5 rounded"
+                    >
+                      Close ✕
+                    </button>
+                  )}
                 </div>
 
                 {/* Dropdown Options */}
-                {showStudentDropdown && matchingStudents.length > 0 && (
-                  <div className="absolute z-20 left-0 right-0 mt-1 max-h-48 overflow-y-auto rounded-lg bg-navy-900 border border-navy-600 shadow-xl divide-y divide-navy-700/60">
-                    {matchingStudents.map((s) => (
-                      <div
-                        key={s.id}
-                        onClick={() => {
-                          setSelectedStudent(s);
-                          setShowStudentDropdown(false);
-                          // Auto set amount to outstanding if balance > 0
-                          const bal = parseFloat(s.outstandingBalance || 0);
-                          if (bal > 0 && !paymentForm.amount) {
-                            setPaymentForm((prev) => ({ ...prev, amount: String(bal) }));
-                          }
-                        }}
-                        className="p-2.5 hover:bg-navy-800 cursor-pointer flex items-center justify-between text-xs transition-colors"
-                      >
-                        <div>
-                          <p className="font-semibold text-slate-100">{s.fullName}</p>
-                          <p className="text-slate-400 font-mono text-[11px]">
-                            {s.studentId} • Room {s.roomNumber}
-                          </p>
+                {showStudentDropdown && (
+                  <div className="absolute z-30 left-0 right-0 mt-1 max-h-56 overflow-y-auto rounded-lg bg-navy-900 border border-navy-600 shadow-2xl divide-y divide-navy-700/60">
+                    {matchingStudents.length > 0 ? (
+                      matchingStudents.map((s) => (
+                        <div
+                          key={s.id}
+                          onClick={() => {
+                            setSelectedStudent(s);
+                            setShowStudentDropdown(false);
+                            // Auto set amount to outstanding if balance > 0
+                            const bal = parseFloat(s.outstandingBalance || 0);
+                            if (bal > 0 && !paymentForm.amount) {
+                              setPaymentForm((prev) => ({ ...prev, amount: String(bal) }));
+                            }
+                          }}
+                          className="p-2.5 hover:bg-navy-800 cursor-pointer flex items-center justify-between text-xs transition-colors"
+                        >
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <p className="font-semibold text-slate-100">{s.fullName}</p>
+                              {s.status === 'INACTIVE' && (
+                                <span className="px-1.5 py-0.5 rounded text-[10px] bg-slate-700 text-slate-300 font-mono">
+                                  Former
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-slate-400 font-mono text-[11px]">
+                              {s.studentId} • Room {s.roomNumber || 'N/A'}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-[10px] text-slate-400 block">Due:</span>
+                            <span
+                              className={`font-bold font-mono ${
+                                parseFloat(s.outstandingBalance || 0) > 0 ? 'text-red-400' : 'text-emerald-400'
+                              }`}
+                            >
+                              {formatNPR(s.outstandingBalance || 0)}
+                            </span>
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <span className="text-[10px] text-slate-400 block">Due:</span>
-                          <span className="font-bold text-red-400 font-mono">
-                            {formatNPR(s.outstandingBalance || 0)}
-                          </span>
-                        </div>
+                      ))
+                    ) : (
+                      <div className="p-3 text-center text-xs text-slate-400">
+                        {allStudents.length === 0
+                          ? 'No students found. Add a student in the Students section first.'
+                          : 'No students match your search.'}
                       </div>
-                    ))}
+                    )}
                   </div>
                 )}
               </div>
