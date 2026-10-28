@@ -25,10 +25,18 @@ const app = express();
 app.use(helmet());
 
 // CORS configuration
-const corsOrigin = process.env.CORS_ORIGIN || 'http://localhost:5173';
+const corsOrigin = process.env.CORS_ORIGIN;
 app.use(
   cors({
-    origin: corsOrigin === '*' ? '*' : corsOrigin.split(',').map((o) => o.trim()),
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (!corsOrigin || corsOrigin === '*') return callback(null, true);
+      const allowedOrigins = corsOrigin.split(',').map((o) => o.trim());
+      if (allowedOrigins.includes(origin) || origin.endsWith('.onrender.com')) {
+        return callback(null, true);
+      }
+      return callback(null, true);
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
