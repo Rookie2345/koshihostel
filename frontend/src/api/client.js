@@ -21,8 +21,10 @@ export const setClientAccessToken = (token) => {
 
 export const getClientAccessToken = () => accessToken;
 
+const BASE_URL = import.meta.env.VITE_API_URL || '/api';
+
 const apiClient = axios.create({
-  baseURL: '/api',
+  baseURL: BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -76,7 +78,7 @@ apiClient.interceptors.response.use(
       }
 
       try {
-        const response = await axios.post('/api/auth/refresh', { refreshToken });
+        const response = await axios.post(`${BASE_URL}/auth/refresh`, { refreshToken });
         const data = response.data;
         const newAccessToken = data.accessToken || data.data?.accessToken;
         const newRefreshToken = data.refreshToken || data.data?.refreshToken;
