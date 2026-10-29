@@ -111,7 +111,7 @@ export default function StudentDetail() {
   const [chargeForm, setChargeForm] = useState({
     amount: '',
     date: new Date().toISOString().split('T')[0],
-    chargeType: 'ADJUSTMENT', // 'ADJUSTMENT' | 'DAMAGE' | 'SPECIAL_MEAL' | 'ELECTRICITY' | 'LAUNDRY' | 'LATE_FEE' | 'OTHER'
+    chargeType: '',
     description: '',
     notes: '',
   });
@@ -368,17 +368,12 @@ export default function StudentDetail() {
       return;
     }
 
-    const typeLabels = {
-      ADJUSTMENT: 'Custom Adjustment',
-      DAMAGE: 'Property / Equipment Damage',
-      SPECIAL_MEAL: 'Special Meal / Extra Diet',
-      ELECTRICITY: 'Electricity / AC Surcharge',
-      LAUNDRY: 'Laundry Services',
-      LATE_FEE: 'Late Payment Fine',
-      OTHER: 'Miscellaneous Hostel Charge',
-    };
+    if (!chargeForm.chargeType.trim()) {
+      toast.error('Please enter a charge type or reason');
+      return;
+    }
 
-    const typePrefix = typeLabels[chargeForm.chargeType] || 'Custom Charge';
+    const typePrefix = chargeForm.chargeType.trim();
     const finalDescription = chargeForm.description.trim()
       ? `${typePrefix}: ${chargeForm.description.trim()}`
       : typePrefix;
@@ -399,7 +394,7 @@ export default function StudentDetail() {
       setChargeForm({
         amount: '',
         date: new Date().toISOString().split('T')[0],
-        chargeType: 'ADJUSTMENT',
+        chargeType: '',
         description: '',
         notes: '',
       });
@@ -1214,24 +1209,29 @@ export default function StudentDetail() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Select
-                  label="Charge Type / Category"
-                  value={chargeForm.chargeType}
-                  onChange={(e) => setChargeForm({ ...chargeForm, chargeType: e.target.value })}
-                  options={[
-                    { value: 'ADJUSTMENT', label: 'Custom Fee Adjustment' },
-                    { value: 'DAMAGE', label: 'Property / Room Damage' },
-                    { value: 'SPECIAL_MEAL', label: 'Special Meal / Extra Diet' },
-                    { value: 'ELECTRICITY', label: 'Electricity / AC Surcharge' },
-                    { value: 'LAUNDRY', label: 'Laundry / Cleaning Service' },
-                    { value: 'LATE_FEE', label: 'Late Payment Fine' },
-                    { value: 'OTHER', label: 'Other Miscellaneous Charge' },
-                  ]}
-                />
+                <div>
+                  <Input
+                    label="Charge Type / Reason"
+                    required
+                    placeholder="e.g. Damage, Special Meal, AC Extra, Fine"
+                    value={chargeForm.chargeType}
+                    onChange={(e) => setChargeForm({ ...chargeForm, chargeType: e.target.value })}
+                    list="charge-type-suggestions"
+                  />
+                  <datalist id="charge-type-suggestions">
+                    <option value="Property / Room Damage" />
+                    <option value="Special Meal / Extra Diet" />
+                    <option value="Electricity / AC Surcharge" />
+                    <option value="Laundry / Cleaning Service" />
+                    <option value="Late Payment Fine" />
+                    <option value="Lost Key / ID Card" />
+                    <option value="Custom Fee Adjustment" />
+                  </datalist>
+                </div>
 
                 <Input
-                  label="Description / Purpose"
-                  placeholder="e.g. Window glass replacement, AC extra usage"
+                  label="Description / Purpose (Optional)"
+                  placeholder="e.g. Window glass replacement, Extra AC usage"
                   value={chargeForm.description}
                   onChange={(e) => setChargeForm({ ...chargeForm, description: e.target.value })}
                 />
@@ -1252,7 +1252,7 @@ export default function StudentDetail() {
                     setChargeForm({
                       amount: '',
                       date: new Date().toISOString().split('T')[0],
-                      chargeType: 'ADJUSTMENT',
+                      chargeType: '',
                       description: '',
                       notes: '',
                     })
