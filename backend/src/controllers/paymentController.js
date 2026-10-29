@@ -439,10 +439,120 @@ async function reversePayment(req, res) {
   return successResponse(res, result, 201, 'Transaction reversed successfully');
 }
 
+/**
+ * PUT /api/payments/:id
+ * Edit an existing ledger entry (amount, date, description, notes) and recalculate student balance
+ */
+async function updateLedgerEntry(req, res) {
+  const { id } = req.params;
+  const { amount, date, description, notes, receiptNumber, referenceNumber, paymentMethod } = req.body;
+
+  const existing = await prisma.ledgerEntry.findUnique({
+    where: { id },
+    include: { student: true }
+  });
+
+  if (!existing) {
+    return errorResponse(res, 'Ledger entry not found', 404);
+  }
+
+  const updateData = {};
+  if (date) updateData.date = new Date(date);
+  if (description !== undefined) updateData.description = description.trim();
+  if (notes !== undefined) updateData.notes = notes ? notes.trim() : null;
+  if (receiptNumber !== undefined) updateData.receiptNumber = receiptNumber ? receiptNumber.trim() : null;
+  if (referenceNumber !== undefined) updateData.referenceNumber = referenceNumber ? referenceNumber.trim() : null;
+  if (paymentMethod !== undefined) updateData.paymentMethod = paymentMethod;
+
+  if (amount !== undefined && amount !== null && amount !== '') {
+    const amountDec = new Prisma.Decimal(amount);
+    if (amountDec.lessThan(0)) {
+      return errorResponse(res, 'Amount cannot be negative', 400);
+    }
+    // Update either debit or credit depending on original entry
+    if (new Prisma.Decimal(existing.debit).greaterThan(0)) {
+      updateData.debit = amountDec;
+    } else if (new Prisma.Decimal(existing.credit).greaterThan(0)) {
+      updateData.credit = amountDec;
+    }
+  }
+
+  const result = await prisma.$transaction(async (tx) => {
+    const updated = await tx.ledgerEntry.update({
+      where: { id },
+      data: updateData
+    });
+
+    const newBalance = await recalculateBalance(existing.studentId, tx);
+
+    await logAudit({
+      userId: req.user.id,
+      action: 'UPDATE_LEDGER_ENTRY',
+      entity: 'LedgerEntry',
+      entityId: id,
+      oldValue: existing,
+      newValue: { ...updated, newBalance: newBalance.toFixed(2) },
+      ipAddress: req.ip,
+      tx
+    });
+
+    return { updated, newOutstandingBalance: newBalance.toFixed(2) };
+  });
+
+  return successResponse(res, result, 200, 'Ledger entry updated successfully');
+}
+
+/**
+ * DELETE /api/payments/:id
+ * Delete an entire ledger entry line and recalculate running balances
+ */
+async function deleteLedgerEntry(req, res) {
+  const { id } = req.params;
+
+  const existing = await prisma.ledgerEntry.findUnique({
+    where: { id }
+  });
+
+  if (!existing) {
+    return errorResponse(res, 'Ledger entry not found', 404);
+  }
+
+  const studentId = existing.studentId;
+
+  await prisma.$transaction(async (tx) => {
+    // Unlink any reversals referencing this entry
+    await tx.ledgerEntry.updateMany({
+      where: { reversedBy: id },
+      data: { reversedBy: null }
+    });
+
+    await tx.ledgerEntry.delete({
+      where: { id }
+    });
+
+    const newBalance = await recalculateBalance(studentId, tx);
+
+    await logAudit({
+      userId: req.user.id,
+      action: 'DELETE_LEDGER_ENTRY',
+      entity: 'LedgerEntry',
+      entityId: id,
+      oldValue: existing,
+      newValue: { deleted: true, newBalance: newBalance.toFixed(2) },
+      ipAddress: req.ip,
+      tx
+    });
+  });
+
+  return successResponse(res, null, 200, 'Ledger entry deleted and student balance recalculated');
+}
+
 module.exports = {
   listPayments,
   getPayment,
   recordPayment,
   recordAdjustment,
-  reversePayment
+  reversePayment,
+  updateLedgerEntry,
+  deleteLedgerEntry
 };

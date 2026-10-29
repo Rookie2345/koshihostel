@@ -113,11 +113,25 @@ const PORT = parseInt(process.env.PORT, 10) || 5000;
 
 let server;
 if (process.env.NODE_ENV !== 'test') {
-  server = app.listen(PORT, () => {
+  server = app.listen(PORT, async () => {
     console.log(`====================================================`);
     console.log(`🚀 Koshi Hostel Backend Server running on port ${PORT}`);
     console.log(`🌐 Health check available at: http://localhost:${PORT}/api/health`);
     console.log(`====================================================`);
+
+    // Ensure 'amoon67' is automatically migrated to 'admin'
+    try {
+      const oldAdmin = await prisma.user.findUnique({ where: { username: 'amoon67' } });
+      if (oldAdmin) {
+        await prisma.user.update({
+          where: { id: oldAdmin.id },
+          data: { username: 'admin' }
+        });
+        console.log(`[BOOT] Migrated admin username from "amoon67" to "admin".`);
+      }
+    } catch (err) {
+      console.warn(`[BOOT] Admin username check:`, err.message);
+    }
   });
 }
 

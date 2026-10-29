@@ -265,26 +265,29 @@ export default function Billing() {
             {/* Period Selection */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-xl bg-navy-900/60 border border-navy-700/60">
               <Select
-                label="Month (Calendar & Approx. Nepali Month)"
+                label="Billing Month (Nepali Month)"
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(Number(e.target.value))}
                 options={GREGORIAN_MONTHS.map((m) => {
                   const nepaliApprox = getApproxNepaliMonth(m.id);
                   return {
                     value: m.id,
-                    label: `${m.name} (${nepaliApprox.name} / ${nepaliApprox.nepaliName})`,
+                    label: `${nepaliApprox.name} (${nepaliApprox.nepaliName})`,
                   };
                 })}
               />
 
               <Select
-                label="Year"
+                label="Billing Year (Bikram Sambat)"
                 value={selectedYear}
                 onChange={(e) => setSelectedYear(Number(e.target.value))}
-                options={[2024, 2025, 2026, 2027, 2028].map((y) => ({
-                  value: y,
-                  label: `${y} (${selectedMonth >= 4 ? y + 57 : y + 56} B.S.)`,
-                }))}
+                options={[2024, 2025, 2026, 2027, 2028].map((y) => {
+                  const bsYear = selectedMonth >= 4 ? y + 57 : y + 56;
+                  return {
+                    value: y,
+                    label: `${bsYear} B.S.`,
+                  };
+                })}
               />
             </div>
 

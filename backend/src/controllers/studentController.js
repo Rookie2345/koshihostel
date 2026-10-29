@@ -635,8 +635,8 @@ async function getStudentLedger(req, res) {
         }
       },
       orderBy: [
-        { date: 'desc' },
-        { createdAt: 'desc' }
+        { date: 'asc' },
+        { createdAt: 'asc' }
       ],
       skip,
       take: parsedLimit

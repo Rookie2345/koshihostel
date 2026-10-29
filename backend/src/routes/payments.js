@@ -67,6 +67,26 @@ router.get(
   paymentController.getPayment
 );
 
+// PUT /api/payments/:id — edit a ledger entry
+router.put(
+  '/:id',
+  [
+    param('id').isUUID().withMessage('Invalid payment ID'),
+    validateRequest
+  ],
+  paymentController.updateLedgerEntry
+);
+
+// DELETE /api/payments/:id — delete a ledger entry
+router.delete(
+  '/:id',
+  [
+    param('id').isUUID().withMessage('Invalid payment ID'),
+    validateRequest
+  ],
+  paymentController.deleteLedgerEntry
+);
+
 // POST /api/payments/:id/reverse — reverse a transaction
 router.post(
   '/:id/reverse',

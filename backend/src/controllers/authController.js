@@ -182,6 +182,74 @@ async function changePassword(req, res) {
   return successResponse(res, null, 200, 'Password changed successfully');
 }
 
+/**
+ * PUT /api/auth/profile
+ * Allow authenticated admin to update their username and/or password
+ */
+async function updateProfile(req, res) {
+  const { newUsername, currentPassword, newPassword } = req.body;
+  const userId = req.user.id;
+
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) {
+    return errorResponse(res, 'User not found', 404);
+  }
+
+  // If changing password, verify current password
+  let newPasswordHash;
+  if (newPassword) {
+    if (!currentPassword) {
+      return errorResponse(res, 'Current password is required to set a new password', 400);
+    }
+    const isMatch = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!isMatch) {
+      return errorResponse(res, 'Current password is incorrect', 400);
+    }
+    newPasswordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+  }
+
+  const updateData = {};
+  if (newUsername && newUsername.trim() && newUsername.trim() !== user.username) {
+    const cleanNew = newUsername.trim();
+    // Check uniqueness
+    const exists = await prisma.user.findUnique({ where: { username: cleanNew } });
+    if (exists && exists.id !== userId) {
+      return errorResponse(res, `Username '${cleanNew}' is already taken`, 409);
+    }
+    updateData.username = cleanNew;
+  }
+
+  if (newPasswordHash) {
+    updateData.passwordHash = newPasswordHash;
+  }
+
+  if (Object.keys(updateData).length === 0) {
+    return errorResponse(res, 'No changes provided', 400);
+  }
+
+  const updatedUser = await prisma.user.update({
+    where: { id: userId },
+    data: updateData,
+    select: {
+      id: true,
+      username: true,
+      role: true
+    }
+  });
+
+  await logAudit({
+    userId,
+    action: 'UPDATE_ADMIN_PROFILE',
+    entity: 'User',
+    entityId: userId,
+    oldValue: { username: user.username },
+    newValue: { username: updatedUser.username, passwordChanged: Boolean(newPasswordHash) },
+    ipAddress: req.ip
+  });
+
+  return successResponse(res, updatedUser, 200, 'Profile updated successfully');
+}
+
 async function resetStudentPassword(req, res) {
   const { userId, newPassword } = req.body;
 
@@ -235,5 +303,6 @@ module.exports = {
   refreshToken,
   logout,
   changePassword,
+  updateProfile,
   resetStudentPassword
 };

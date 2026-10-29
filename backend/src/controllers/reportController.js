@@ -35,7 +35,7 @@ async function getDashboardStats(req, res) {
     }),
     prisma.ledgerEntry.findMany({
       where: {
-        entryType: 'MONTHLY_FEE',
+        debit: { gt: 0 },
         date: {
           gte: startOfCurrentMonth,
           lte: endOfCurrentMonth
@@ -140,7 +140,7 @@ async function getMonthlySummary(req, res) {
     const [charges, collections] = await Promise.all([
       prisma.ledgerEntry.findMany({
         where: {
-          entryType: 'MONTHLY_FEE',
+          debit: { gt: 0 },
           date: { gte: monthStart, lte: monthEnd }
         },
         select: { debit: true }

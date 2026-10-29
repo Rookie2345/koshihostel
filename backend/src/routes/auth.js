@@ -45,6 +45,16 @@ router.post(
   authController.changePassword
 );
 
+// PUT /api/auth/profile (authenticated user updates username and/or password)
+router.put(
+  '/profile',
+  [
+    authenticate,
+    validateRequest
+  ],
+  authController.updateProfile
+);
+
 // POST /api/auth/admin/reset-student-password (admin only)
 router.post(
   '/admin/reset-student-password',

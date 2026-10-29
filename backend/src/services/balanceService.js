@@ -168,8 +168,8 @@ async function getRunningBalance(studentId, options = {}, tx = prisma) {
       }
     },
     orderBy: [
-      { date: 'desc' },
-      { createdAt: 'desc' }
+      { date: 'asc' },
+      { createdAt: 'asc' }
     ]
   });
 

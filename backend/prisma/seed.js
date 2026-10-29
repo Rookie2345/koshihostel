@@ -35,22 +35,32 @@ async function main() {
   const saltRounds = parseInt(process.env.BCRYPT_ROUNDS, 10) || 12;
   const passwordHash = await bcrypt.hash(ADMIN_INITIAL_PASSWORD, saltRounds);
 
+  // If old amoon67 user exists, update username to admin
+  const existingAmoon = await prisma.user.findUnique({ where: { username: 'amoon67' } });
+  if (existingAmoon) {
+    await prisma.user.update({
+      where: { id: existingAmoon.id },
+      data: { username: 'admin' }
+    });
+    console.log('Migrated old admin username from "amoon67" to "admin".');
+  }
+
   const adminUser = await prisma.user.upsert({
-    where: { username: 'amoon67' },
+    where: { username: 'admin' },
     update: {
       passwordHash,
       role: 'ADMIN',
       loginEnabled: true
     },
     create: {
-      username: 'amoon67',
+      username: 'admin',
       passwordHash,
       role: 'ADMIN',
       loginEnabled: true
     }
   });
 
-  console.log(`Admin user "amoon67" provisioned (ID: ${adminUser.id}).`);
+  console.log(`Admin user "admin" provisioned (ID: ${adminUser.id}).`);
 
   // 2. Seed Default Fee Groups
   const defaultFeeGroups = [

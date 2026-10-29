@@ -29,6 +29,8 @@ import {
   Eye,
   EyeOff,
   PlusCircle,
+  Trash2,
+  Edit3,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -116,6 +118,20 @@ export default function StudentDetail() {
     notes: '',
   });
   const [chargeSubmitting, setChargeSubmitting] = useState(false);
+
+  // Edit Ledger Entry State
+  const [isEditEntryModalOpen, setIsEditEntryModalOpen] = useState(false);
+  const [editingEntry, setEditingEntry] = useState({
+    id: '',
+    amount: '',
+    date: '',
+    description: '',
+    notes: '',
+  });
+
+  // Delete Ledger Entry State
+  const [isDeleteEntryModalOpen, setIsDeleteEntryModalOpen] = useState(false);
+  const [deletingEntryId, setDeletingEntryId] = useState(null);
 
   // Fee Groups for selection
   const { data: feeGroupsData } = useFeeGroups();
@@ -413,6 +429,44 @@ export default function StudentDetail() {
       setChargeSubmitting(false);
     }
   };
+
+  // Edit Ledger Entry Mutation
+  const updateEntryMutation = useMutation({
+    mutationFn: async (payload) => {
+      const { id: entryId, ...data } = payload;
+      return apiClient.put(`/payments/${entryId}`, data);
+    },
+    onSuccess: () => {
+      toast.success('Ledger record updated successfully');
+      setIsEditEntryModalOpen(false);
+      queryClient.invalidateQueries({ queryKey: STUDENT_KEYS.detail(id) });
+      queryClient.invalidateQueries({ queryKey: ['students', 'statement', id] });
+      queryClient.invalidateQueries({ queryKey: ['students', 'ledger', id] });
+      queryClient.invalidateQueries({ queryKey: ['reports'] });
+    },
+    onError: (err) => {
+      toast.error(err.response?.data?.message || err.message || 'Failed to update ledger record');
+    },
+  });
+
+  // Delete Ledger Entry Mutation
+  const deleteEntryMutation = useMutation({
+    mutationFn: async (entryId) => {
+      return apiClient.delete(`/payments/${entryId}`);
+    },
+    onSuccess: () => {
+      toast.success('Ledger record deleted and balance recalculated');
+      setIsDeleteEntryModalOpen(false);
+      setDeletingEntryId(null);
+      queryClient.invalidateQueries({ queryKey: STUDENT_KEYS.detail(id) });
+      queryClient.invalidateQueries({ queryKey: ['students', 'statement', id] });
+      queryClient.invalidateQueries({ queryKey: ['students', 'ledger', id] });
+      queryClient.invalidateQueries({ queryKey: ['reports'] });
+    },
+    onError: (err) => {
+      toast.error(err.response?.data?.message || err.message || 'Failed to delete ledger record');
+    },
+  });
 
   // Loading Skeleton
   if (isStudentLoading) {
@@ -962,6 +1016,7 @@ export default function StudentDetail() {
               { label: 'Debit (NPR)', align: 'right' },
               { label: 'Credit (NPR)', align: 'right' },
               { label: 'Balance (NPR)', align: 'right' },
+              { label: 'Actions', align: 'center' },
             ]}
             empty={ledgerEntries.length === 0}
             emptyMessage="No ledger entries found matching your criteria."
@@ -1034,6 +1089,38 @@ export default function StudentDetail() {
                     >
                       {formatNPR(balanceNum)}
                     </span>
+                  </TableCell>
+                  <TableCell align="center">
+                    <div className="flex items-center justify-center gap-1.5 no-print">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingEntry({
+                            id: row.id,
+                            amount: debitNum > 0 ? String(debitNum) : String(creditNum),
+                            date: row.date ? new Date(row.date).toISOString().split('T')[0] : '',
+                            description: row.description || '',
+                            notes: row.notes || '',
+                          });
+                          setIsEditEntryModalOpen(true);
+                        }}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-cyan-400 hover:bg-navy-800 transition-colors"
+                        title="Edit this record"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDeletingEntryId(row.id);
+                          setIsDeleteEntryModalOpen(true);
+                        }}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                        title="Delete this record"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </TableCell>
                 </TableRow>
               );
@@ -1497,6 +1584,92 @@ export default function StudentDetail() {
         confirmText={loginEnabled ? 'Disable Access' : 'Enable Access'}
         type={loginEnabled ? 'warning' : 'info'}
         loading={toggleLoginMutation.isPending}
+      />
+
+      {/* MODAL: EDIT LEDGER ENTRY */}
+      <Modal
+        isOpen={isEditEntryModalOpen}
+        onClose={() => setIsEditEntryModalOpen(false)}
+        title="Edit Ledger Record"
+        subtitle="Update amount, date, or details. Student balance will be automatically recalculated."
+        maxWidth="max-w-md"
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            updateEntryMutation.mutate({
+              id: editingEntry.id,
+              amount: parseFloat(editingEntry.amount),
+              date: editingEntry.date ? new Date(editingEntry.date).toISOString() : undefined,
+              description: editingEntry.description,
+              notes: editingEntry.notes,
+            });
+          }}
+          className="space-y-4"
+        >
+          <Input
+            label="Amount (NPR)"
+            type="number"
+            step="0.01"
+            required
+            value={editingEntry.amount}
+            onChange={(e) => setEditingEntry({ ...editingEntry, amount: e.target.value })}
+          />
+
+          <Input
+            label="Date"
+            type="date"
+            required
+            value={editingEntry.date}
+            onChange={(e) => setEditingEntry({ ...editingEntry, date: e.target.value })}
+          />
+
+          <Input
+            label="Description"
+            required
+            value={editingEntry.description}
+            onChange={(e) => setEditingEntry({ ...editingEntry, description: e.target.value })}
+          />
+
+          <Input
+            label="Notes / Remarks (Optional)"
+            value={editingEntry.notes}
+            onChange={(e) => setEditingEntry({ ...editingEntry, notes: e.target.value })}
+          />
+
+          <div className="flex items-center justify-end gap-3 pt-3 border-t border-navy-700/60">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setIsEditEntryModalOpen(false)}
+              disabled={updateEntryMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary" loading={updateEntryMutation.isPending}>
+              Save Changes
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* CONFIRM DIALOG: DELETE LEDGER ENTRY */}
+      <ConfirmDialog
+        isOpen={isDeleteEntryModalOpen}
+        onClose={() => {
+          setIsDeleteEntryModalOpen(false);
+          setDeletingEntryId(null);
+        }}
+        onConfirm={() => {
+          if (deletingEntryId) {
+            deleteEntryMutation.mutate(deletingEntryId);
+          }
+        }}
+        title="Delete Ledger Record"
+        message="Are you sure you want to permanently delete this transaction line? The student's running balance and financial statement will be automatically recalculated."
+        confirmText="Yes, Delete Record"
+        type="danger"
+        loading={deleteEntryMutation.isPending}
       />
     </div>
   );
