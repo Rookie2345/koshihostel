@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Menu, Calendar, User, KeyRound, Check } from 'lucide-react';
-import { format } from 'date-fns';
+import { formatDate } from '../../utils/formatDate';
 import { useAuth } from '../../hooks/useAuth';
 import apiClient from '../../api/client';
 import toast from 'react-hot-toast';
@@ -10,7 +10,7 @@ import Button from '../ui/Button';
 
 export default function Navbar({ onToggleSidebar, title }) {
   const { user, setUser, isAdmin } = useAuth();
-  const todayFormatted = format(new Date(), 'EEEE, dd MMM yyyy');
+  const todayFormatted = formatDate(new Date());
 
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [profileForm, setProfileForm] = useState({
