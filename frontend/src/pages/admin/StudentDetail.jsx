@@ -26,6 +26,8 @@ import {
   RefreshCw,
   Search,
   Filter,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -87,6 +89,7 @@ export default function StudentDetail() {
   // Password reset state
   const [newPassword, setNewPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
+  const [showStudentPassword, setShowStudentPassword] = useState(false);
 
   // Deactivate form state
   const [departureDate, setDepartureDate] = useState(new Date().toISOString().split('T')[0]);
@@ -271,6 +274,7 @@ export default function StudentDetail() {
       await studentsApi.resetPassword(id, newPassword);
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: STUDENT_KEYS.detail(id) });
       toast.success('Student login password reset successfully');
       setIsResetPasswordOpen(false);
       setNewPassword('');
@@ -663,6 +667,40 @@ export default function StudentDetail() {
                 <dt className="text-xs text-slate-400">Web Portal Username</dt>
                 <dd className="font-mono text-slate-300 font-semibold">
                   {student.user?.username || student.studentId}
+                </dd>
+              </div>
+
+              <div className="space-y-1">
+                <dt className="text-xs text-slate-400">Current Password</dt>
+                <dd className="flex items-center gap-2">
+                  <span className="font-mono text-cyan-300 font-medium text-sm">
+                    {student.initialPassword
+                      ? showStudentPassword
+                        ? student.initialPassword
+                        : '••••••••'
+                      : <span className="text-slate-500 italic text-xs">Not recorded</span>}
+                  </span>
+                  {student.initialPassword && (
+                    <button
+                      type="button"
+                      onClick={() => setShowStudentPassword((prev) => !prev)}
+                      className="p-1 rounded text-slate-400 hover:text-cyan-400 hover:bg-navy-800 transition-colors"
+                      title={showStudentPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showStudentPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewPassword('');
+                      setPasswordError('');
+                      setIsResetPasswordOpen(true);
+                    }}
+                    className="text-xs text-cyan-400 hover:text-cyan-300 hover:underline ml-1"
+                  >
+                    Change
+                  </button>
                 </dd>
               </div>
 

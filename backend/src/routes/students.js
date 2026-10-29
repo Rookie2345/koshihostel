@@ -113,6 +113,20 @@ router.post(
   studentController.toggleLogin
 );
 
+// POST /api/students/:id/reset-password — reset student password (admin only)
+router.post(
+  '/:id/reset-password',
+  requireAdmin,
+  [
+    param('id').trim().notEmpty().withMessage('Student ID is required'),
+    body('password')
+      .isLength({ min: 6 })
+      .withMessage('New password must be at least 6 characters long'),
+    validateRequest
+  ],
+  studentController.resetStudentPassword
+);
+
 // GET /api/students/:id/ledger — full ledger (admin or own student)
 router.get(
   '/:id/ledger',

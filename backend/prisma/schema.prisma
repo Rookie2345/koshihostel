@@ -44,6 +44,7 @@ model User {
   id           String   @id @default(uuid())
   username     String   @unique
   passwordHash String
+  initialPassword String?
   role         Role
   loginEnabled Boolean  @default(true)
   createdAt    DateTime @default(now())
@@ -76,6 +77,7 @@ model Student {
   monthlyFee         Decimal       @db.Decimal(12, 2)
   outstandingBalance Decimal       @default(0.00) @db.Decimal(12, 2)
   notes              String?
+  initialPassword    String?
   userId             String        @unique
   user               User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt          DateTime      @default(now())

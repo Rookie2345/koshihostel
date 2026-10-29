@@ -204,7 +204,8 @@ async function createStudent(req, res) {
         monthlyFee: assignedMonthlyFee,
         outstandingBalance: new Prisma.Decimal('0.00'),
         notes: notes ? notes.trim() : null,
-        userId: user.id
+        userId: user.id,
+        initialPassword: studentPassword
       },
       include: {
         currentFeeGroup: true,
@@ -690,6 +691,46 @@ async function getStudentStatement(req, res) {
   return successResponse(res, statement);
 }
 
+/**
+ * POST /api/students/:id/reset-password
+ * Admin resets a student's password and stores the new plaintext for display
+ */
+async function resetStudentPassword(req, res) {
+  const { id } = req.params;
+  const { password } = req.body;
+
+  const student = await prisma.student.findFirst({
+    where: { OR: [{ id }, { studentId: id }] },
+    include: { user: true }
+  });
+
+  if (!student) {
+    return errorResponse(res, 'Student not found', 404);
+  }
+
+  if (!student.user) {
+    return errorResponse(res, 'Student has no login account', 400);
+  }
+
+  const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: student.user.id },
+      data: {
+        passwordHash,
+        initialPassword: password
+      }
+    }),
+    prisma.student.update({
+      where: { id: student.id },
+      data: { initialPassword: password }
+    })
+  ]);
+
+  return successResponse(res, { message: 'Password reset successfully' });
+}
+
 module.exports = {
   listStudents,
   getStudent,
@@ -699,6 +740,7 @@ module.exports = {
   activateStudent,
   assignFeeGroup,
   toggleLogin,
+  resetStudentPassword,
   getStudentLedger,
   getStudentStatement
 };

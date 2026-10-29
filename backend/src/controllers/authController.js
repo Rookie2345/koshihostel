@@ -196,9 +196,21 @@ async function resetStudentPassword(req, res) {
 
   const newHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
 
-  await prisma.user.update({
-    where: { id: userId },
-    data: { passwordHash: newHash }
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({
+      where: { id: userId },
+      data: {
+        passwordHash: newHash,
+        initialPassword: newPassword
+      }
+    });
+
+    if (user.student) {
+      await tx.student.update({
+        where: { id: user.student.id },
+        data: { initialPassword: newPassword }
+      });
+    }
   });
 
   await logAudit({
