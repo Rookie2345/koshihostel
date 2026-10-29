@@ -85,6 +85,25 @@ export default function Dashboard() {
   ];
 
   const recentTransactions = dashboard?.recentTransactions || [];
+
+  // Deduplicate transactions by ID and accidental duplicate submissions
+  const deduplicatedRecentTransactions = React.useMemo(() => {
+    const unique = [];
+    const seen = new Set();
+    for (const tx of recentTransactions) {
+      if (!tx || !tx.id || seen.has(tx.id)) continue;
+      const timeKey = tx.createdAt ? Math.floor(new Date(tx.createdAt).getTime() / 120000) : 0;
+      const debitVal = parseFloat(tx.debit || 0).toFixed(2);
+      const creditVal = parseFloat(tx.credit || 0).toFixed(2);
+      const contentKey = `${tx.studentId || tx.studentName}_${tx.entryType || tx.type}_${debitVal}_${creditVal}_${(tx.description || '').trim()}_${timeKey}`;
+      if (seen.has(contentKey)) continue;
+      seen.add(tx.id);
+      seen.add(contentKey);
+      unique.push(tx);
+      if (unique.length >= 10) break;
+    }
+    return unique;
+  }, [recentTransactions]);
   const topDuesStudents = dashboard?.topDuesStudents || dashboard?.topOutstandingStudents || dashboard?.topOutstanding || [];
 
   return (
@@ -298,7 +317,7 @@ export default function Dashboard() {
             <Button
               variant="ghost"
               size="xs"
-              onClick={() => navigate('/admin/payments')}
+              onClick={() => navigate('/admin/payments?type=ALL')}
             >
               View All <ArrowRight className="w-3.5 h-3.5 ml-1" />
             </Button>
@@ -306,11 +325,11 @@ export default function Dashboard() {
         >
           {isLoading ? (
             <Skeleton count={5} className="h-10 my-2" />
-          ) : recentTransactions.length > 0 ? (
+          ) : deduplicatedRecentTransactions.length > 0 ? (
             <Table
               headers={['Date', 'Student', 'Type', { label: 'Amount', align: 'right' }, { label: 'Action', align: 'center' }]}
             >
-              {recentTransactions.slice(0, 10).map((tx, idx) => {
+              {deduplicatedRecentTransactions.slice(0, 10).map((tx, idx) => {
                 const entryType = tx.entryType || tx.type || 'PAYMENT';
                 const isCredit = parseFloat(tx.credit || 0) > 0 || entryType === 'PAYMENT';
                 const amount = isCredit

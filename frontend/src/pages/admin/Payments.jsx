@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   CreditCard,
@@ -46,12 +46,22 @@ export default function Payments() {
   const queryClient = useQueryClient();
 
   // Filters & Pagination State
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialType = searchParams.get('type') || searchParams.get('entryType') || 'ALL';
+  const [selectedType, setSelectedType] = useState(initialType);
   const [search, setSearch] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize] = useState(15);
+
+  React.useEffect(() => {
+    const typeParam = searchParams.get('type') || searchParams.get('entryType');
+    if (typeParam) {
+      setSelectedType(typeParam);
+    }
+  }, [searchParams]);
 
   // Modal State
   const [isRecordModalOpen, setIsRecordModalOpen] = useState(false);
@@ -77,12 +87,12 @@ export default function Payments() {
     error,
     refetch,
   } = useQuery({
-    queryKey: ['payments', 'list', { search, startDate, endDate, paymentMethod, page, pageSize }],
+    queryKey: ['payments', 'list', { search, startDate, endDate, paymentMethod, selectedType, page, pageSize }],
     queryFn: async () => {
       const params = {
         page,
         limit: pageSize,
-        entryType: 'PAYMENT',
+        entryType: selectedType,
       };
       if (search.trim()) params.search = search.trim();
       if (startDate) params.startDate = startDate;
@@ -238,6 +248,8 @@ export default function Payments() {
     setStartDate('');
     setEndDate('');
     setPaymentMethod('');
+    setSelectedType('ALL');
+    setSearchParams({});
     setPage(1);
   };
 
@@ -246,9 +258,9 @@ export default function Payments() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-navy-700/60">
         <div>
-          <h1 className="text-2xl font-bold text-slate-100 tracking-tight">Payments & Collections</h1>
+          <h1 className="text-2xl font-bold text-slate-100 tracking-tight">Transactions & Payments</h1>
           <p className="text-xs sm:text-sm text-slate-400 mt-1">
-            Track student fee payments, receipt numbers, payment methods, and cash reconciliations.
+            Track student fee debits, monthly billing, custom charges, and payments.
           </p>
         </div>
 
@@ -284,17 +296,43 @@ export default function Payments() {
 
       {/* Filter & Search Toolbar */}
       <Card className="p-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 items-end">
           <div className="lg:col-span-2">
             <Input
-              label="Search Payments"
+              label="Search Transactions"
               icon={Search}
-              placeholder="Student name, student ID, ref #, or receipt..."
+              placeholder="Student name, ID, desc, receipt..."
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
                 setPage(1);
               }}
+            />
+          </div>
+
+          <div>
+            <Select
+              label="Transaction Type"
+              value={selectedType}
+              onChange={(e) => {
+                const val = e.target.value;
+                setSelectedType(val);
+                setSearchParams((prev) => {
+                  const np = new URLSearchParams(prev);
+                  if (val === 'ALL') np.delete('type');
+                  else np.set('type', val);
+                  return np;
+                });
+                setPage(1);
+              }}
+              options={[
+                { value: 'ALL', label: 'All Transactions' },
+                { value: 'PAYMENT', label: 'Payments' },
+                { value: 'MONTHLY_FEE', label: 'Monthly Fees' },
+                { value: 'ADJUSTMENT', label: 'Custom Charges' },
+                { value: 'CREDIT', label: 'Concessions / Credits' },
+                { value: 'REFUND', label: 'Refunds' },
+              ]}
             />
           </div>
 
@@ -342,7 +380,7 @@ export default function Payments() {
           </div>
         </div>
 
-        {(search || startDate || endDate || paymentMethod) && (
+        {(search || startDate || endDate || paymentMethod || selectedType !== 'ALL') && (
           <div className="mt-3 pt-3 border-t border-navy-700/60 flex items-center justify-between text-xs text-slate-400">
             <span>Filtering active</span>
             <button
@@ -387,24 +425,48 @@ export default function Payments() {
           <>
             <Table
               headers={[
-                'Date & Time',
+                'Date',
                 'Student Name',
                 'Room',
+                'Type',
                 { label: 'Amount (NPR)', align: 'right' },
-                'Method',
-                'Reference / Receipt',
-                'Notes',
+                'Details / Description',
                 'Recorded By',
               ]}
               empty={payments.length === 0}
-              emptyMessage="No payment transactions match the selected filters."
+              emptyMessage="No transactions match the selected filters."
             >
               {payments.map((p) => {
-                const amount = parseFloat(p.credit || p.amount || 0);
+                const entryType = p.entryType || 'PAYMENT';
+                const isCredit = parseFloat(p.credit || 0) > 0 || entryType === 'PAYMENT';
+                const amount = isCredit
+                  ? parseFloat(p.credit || p.amount || 0)
+                  : parseFloat(p.debit || p.amount || 0);
+
+                let badgeLabel = entryType;
+                let badgeVariant = entryType;
+                let detailText = p.description || '';
+
+                if (entryType === 'ADJUSTMENT' && p.description) {
+                  if (p.description.includes(':')) {
+                    const parts = p.description.split(':');
+                    badgeLabel = parts[0].trim();
+                    detailText = parts.slice(1).join(':').trim();
+                  } else {
+                    badgeLabel = p.description.trim();
+                  }
+                  badgeVariant = 'ADJUSTMENT';
+                } else if (entryType === 'MONTHLY_FEE') {
+                  badgeLabel = 'Monthly Fee';
+                  badgeVariant = 'MONTHLY_FEE';
+                } else if (entryType === 'PAYMENT') {
+                  badgeLabel = p.paymentMethod || 'Payment';
+                  badgeVariant = 'PAYMENT';
+                }
 
                 return (
                   <TableRow key={p.id}>
-                    <TableCell className="font-mono text-xs text-slate-300">
+                    <TableCell className="font-mono text-xs text-slate-300 whitespace-nowrap">
                       {formatDate(p.date)}
                     </TableCell>
 
@@ -426,38 +488,36 @@ export default function Payments() {
                       )}
                     </TableCell>
 
-                    <TableCell className="text-slate-300">
+                    <TableCell className="text-slate-300 text-xs">
                       {p.student?.roomNumber ? `Room ${p.student.roomNumber}` : '-'}
                     </TableCell>
 
-                    <TableCell align="right">
-                      <span className="font-bold text-emerald-400 font-mono text-sm">
-                        {formatNPR(amount)}
-                      </span>
-                    </TableCell>
-
                     <TableCell>
-                      <Badge variant={p.paymentMethod || 'PAYMENT'}>
-                        {p.paymentMethod || 'CASH'}
+                      <Badge variant={badgeVariant} size="xs">
+                        {badgeLabel}
                       </Badge>
                     </TableCell>
 
-                    <TableCell className="text-xs text-slate-300 font-mono">
-                      {p.receiptNumber && (
-                        <div className="font-medium text-slate-200">RCP: {p.receiptNumber}</div>
-                      )}
-                      {p.referenceNumber && (
-                        <div className="text-slate-400 text-[11px]">Ref: {p.referenceNumber}</div>
-                      )}
-                      {!p.receiptNumber && !p.referenceNumber && '-'}
-                    </TableCell>
-
-                    <TableCell className="text-xs text-slate-400 max-w-xs truncate">
-                      {p.notes || p.description || '-'}
+                    <TableCell align="right" className="whitespace-nowrap">
+                      <span className={`font-bold font-mono text-sm ${isCredit ? 'text-emerald-400' : 'text-amber-400'}`}>
+                        {isCredit ? '+' : '-'} {formatNPR(amount)}
+                      </span>
                     </TableCell>
 
                     <TableCell className="text-xs text-slate-300">
-                      {p.recorder?.username || 'Admin'}
+                      <div className="max-w-[220px] truncate" title={detailText || p.notes || ''}>
+                        {detailText || p.notes || '-'}
+                      </div>
+                      {(p.receiptNumber || p.referenceNumber) && (
+                        <div className="text-[11px] text-slate-400 mt-0.5 flex gap-2">
+                          {p.receiptNumber && <span>RCP: {p.receiptNumber}</span>}
+                          {p.referenceNumber && <span>Ref: {p.referenceNumber}</span>}
+                        </div>
+                      )}
+                    </TableCell>
+
+                    <TableCell className="text-xs text-slate-400">
+                      {p.recorder?.username || 'admin'}
                     </TableCell>
                   </TableRow>
                 );

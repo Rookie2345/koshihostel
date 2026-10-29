@@ -55,8 +55,12 @@ async function getDashboardStats(req, res) {
       select: { credit: true }
     }),
     prisma.ledgerEntry.findMany({
-      take: 10,
-      orderBy: { createdAt: 'desc' },
+      take: 30,
+      orderBy: [
+        { date: 'desc' },
+        { createdAt: 'desc' },
+        { id: 'desc' }
+      ],
       include: {
         student: {
           select: {
@@ -135,27 +139,43 @@ async function getDashboardStats(req, res) {
     currentMonthCollected: currentMonthCollected.toFixed(2),
     thisMonthCollected: currentMonthCollected.toFixed(2),
     currentMonthNepali: getNepaliMonth(currentYear, currentMonth + 1),
-    recentTransactions: (recentTransactions || []).map((tx) => ({
-      id: tx.id,
-      studentId: tx.studentId,
-      studentName: tx.student?.fullName || 'Student',
-      studentCode: tx.student?.studentId || '',
-      roomNumber: tx.student?.roomNumber || '',
-      student: tx.student,
-      date: tx.date,
-      createdAt: tx.createdAt,
-      entryType: tx.entryType,
-      type: tx.entryType,
-      debit: parseFloat(tx.debit || 0),
-      credit: parseFloat(tx.credit || 0),
-      amount: parseFloat(tx.credit > 0 ? tx.credit : tx.debit),
-      balanceAfter: parseFloat(tx.balanceAfter || 0),
-      description: tx.description,
-      referenceNumber: tx.referenceNumber,
-      receiptNumber: tx.receiptNumber,
-      paymentMethod: tx.paymentMethod,
-      recordedBy: tx.recorder?.username || null
-    })),
+    recentTransactions: (() => {
+      const unique = [];
+      const seen = new Set();
+      for (const tx of (recentTransactions || [])) {
+        if (!tx || !tx.id || seen.has(tx.id)) continue;
+        const timeKey = tx.createdAt ? Math.floor(new Date(tx.createdAt).getTime() / 120000) : 0;
+        const debitVal = parseFloat(tx.debit || 0).toFixed(2);
+        const creditVal = parseFloat(tx.credit || 0).toFixed(2);
+        const contentKey = `${tx.studentId}_${tx.entryType}_${debitVal}_${creditVal}_${(tx.description || '').trim()}_${timeKey}`;
+        if (seen.has(contentKey)) continue;
+        seen.add(tx.id);
+        seen.add(contentKey);
+        unique.push({
+          id: tx.id,
+          studentId: tx.studentId,
+          studentName: tx.student?.fullName || 'Student',
+          studentCode: tx.student?.studentId || '',
+          roomNumber: tx.student?.roomNumber || '',
+          student: tx.student,
+          date: tx.date,
+          createdAt: tx.createdAt,
+          entryType: tx.entryType,
+          type: tx.entryType,
+          debit: parseFloat(tx.debit || 0),
+          credit: parseFloat(tx.credit || 0),
+          amount: parseFloat(tx.credit > 0 ? tx.credit : tx.debit),
+          balanceAfter: parseFloat(tx.balanceAfter || 0),
+          description: tx.description,
+          referenceNumber: tx.referenceNumber,
+          receiptNumber: tx.receiptNumber,
+          paymentMethod: tx.paymentMethod,
+          recordedBy: tx.recorder?.username || null
+        });
+        if (unique.length >= 10) break;
+      }
+      return unique;
+    })(),
     topDuesStudents: (topDuesStudents || []).map((s) => ({
       id: s.id,
       studentId: s.studentId,

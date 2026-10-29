@@ -14,7 +14,7 @@ async function listPayments(req, res) {
     endDate,
     paymentMethod,
     search,
-    entryType = 'PAYMENT',
+    entryType = 'ALL',
     page = 1,
     limit = 20
   } = req.query;
@@ -25,9 +25,7 @@ async function listPayments(req, res) {
 
   const whereClause = {};
 
-  if (entryType === 'ALL') {
-    whereClause.entryType = { in: ['PAYMENT', 'CREDIT', 'REFUND', 'ADJUSTMENT', 'REVERSAL'] };
-  } else if (entryType) {
+  if (entryType && entryType !== 'ALL') {
     whereClause.entryType = entryType;
   }
 
@@ -177,6 +175,30 @@ async function recordPayment(req, res) {
     ? description.trim()
     : `Payment received via ${paymentMethod}${receiptNumber ? ` (Receipt #${receiptNumber})` : ''}`;
 
+  // Prevent duplicate submission within 10 seconds
+  const tenSecondsAgo = new Date(Date.now() - 10000);
+  const existingPayment = await prisma.ledgerEntry.findFirst({
+    where: {
+      studentId,
+      entryType: 'PAYMENT',
+      credit: amountDecimal,
+      createdAt: { gte: tenSecondsAgo }
+    },
+    include: {
+      student: {
+        select: {
+          id: true,
+          studentId: true,
+          fullName: true,
+          roomNumber: true
+        }
+      }
+    }
+  });
+  if (existingPayment) {
+    return successResponse(res, { entry: existingPayment, newOutstandingBalance: student.outstandingBalance }, 200, 'Payment already recorded');
+  }
+
   const result = await prisma.$transaction(async (tx) => {
     // 1. Calculate provisional balance
     const currentBalance = new Prisma.Decimal(student.outstandingBalance || 0);
@@ -295,6 +317,30 @@ async function recordAdjustment(req, res) {
   }
 
   const desc = description ? description.trim() : defaultDescription;
+
+  // Prevent duplicate adjustment submission within 10 seconds
+  const tenSecondsAgo = new Date(Date.now() - 10000);
+  const existingAdj = await prisma.ledgerEntry.findFirst({
+    where: {
+      studentId,
+      entryType: type,
+      description: desc,
+      createdAt: { gte: tenSecondsAgo }
+    },
+    include: {
+      student: {
+        select: {
+          id: true,
+          studentId: true,
+          fullName: true,
+          roomNumber: true
+        }
+      }
+    }
+  });
+  if (existingAdj) {
+    return successResponse(res, { entry: existingAdj }, 200, 'Adjustment already recorded');
+  }
 
   const result = await prisma.$transaction(async (tx) => {
     // 1. Create entry
