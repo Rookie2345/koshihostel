@@ -66,11 +66,13 @@ export default function StudentDashboard() {
     );
   }
 
-  const student = profile?.student;
-  const stats = statement;
-  const entries = ledgerData?.entries || [];
+  const student = profile?.student || profile?.data?.student;
+  const summary = statement?.summary || statement?.data?.summary || statement;
+  const rawEntries = ledgerData?.entries || ledgerData?.data?.entries || statement?.entries || [];
+  const entries = Array.isArray(rawEntries) ? rawEntries : [];
   const isInactive = student?.status === 'INACTIVE';
-  const hasOutstanding = parseFloat(stats?.outstandingBalance || 0) > 0;
+  const outstandingNum = parseFloat(summary?.outstandingBalance || student?.outstandingBalance || 0);
+  const hasOutstanding = outstandingNum > 0;
 
   return (
     <div className="min-h-screen bg-[#0a0f1e] text-slate-100 print:bg-white print:text-black">
@@ -106,7 +108,7 @@ export default function StudentDashboard() {
               <p className="text-amber-300 font-semibold">Account Inactive — Outstanding Balance</p>
               <p className="text-amber-400/80 text-sm mt-0.5">
                 Your account is marked as <strong>inactive</strong>. You still have an outstanding balance of{' '}
-                <strong className="text-amber-300">{formatNPR(stats?.outstandingBalance)}</strong>.
+                <strong className="text-amber-300">{formatNPR(outstandingNum)}</strong>.
                 Please contact Koshi Hostel administration to settle your dues.
               </p>
             </div>
@@ -123,8 +125,8 @@ export default function StudentDashboard() {
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <h2 className="text-xl font-bold text-white">{student?.fullName}</h2>
-                  <Badge variant={student?.status === 'ACTIVE' ? 'success' : 'inactive'}>
-                    {student?.status}
+                  <Badge variant={student?.status === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE'} dot>
+                    {student?.status || 'ACTIVE'}
                   </Badge>
                 </div>
                 <p className="text-slate-400 text-sm mt-0.5">Student ID: <span className="text-cyan-400 font-mono font-medium">{student?.studentId}</span></p>
@@ -149,7 +151,7 @@ export default function StudentDashboard() {
               )}
               <div className="flex items-center gap-1.5 sm:justify-end">
                 <CreditCard size={13} />
-                <span>Monthly Fee: <strong className="text-cyan-400">{formatNPR(student?.monthlyFee)}</strong></span>
+                <span>Monthly Fee: <strong className="text-cyan-400">{formatNPR(student?.monthlyFee || student?.currentFeeGroup?.monthlyAmount)}</strong></span>
               </div>
             </div>
           </div>
@@ -159,32 +161,29 @@ export default function StudentDashboard() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
             label="Total Charged"
-            value={formatNPR(stats?.totalCharged)}
+            value={formatNPR(summary?.totalCharged)}
             icon={TrendingUp}
-            iconColor="text-blue-400"
-            iconBg="bg-blue-900/30"
+            color="amber"
           />
           <StatCard
             label="Total Paid"
-            value={formatNPR(stats?.totalPaid)}
+            value={formatNPR(summary?.totalPaid)}
             icon={CheckCircle}
-            iconColor="text-green-400"
-            iconBg="bg-green-900/30"
+            color="green"
           />
           <StatCard
             label="Outstanding Balance"
-            value={formatNPR(stats?.outstandingBalance)}
+            value={formatNPR(outstandingNum)}
             icon={AlertTriangle}
-            iconColor={hasOutstanding ? 'text-red-400' : 'text-green-400'}
-            iconBg={hasOutstanding ? 'bg-red-900/30' : 'bg-green-900/30'}
-            highlight={hasOutstanding}
+            color={hasOutstanding ? 'red' : 'green'}
+            subtitle={hasOutstanding ? 'Payment pending' : 'All clear'}
           />
           <StatCard
             label="Last Payment"
-            value={stats?.lastPaymentDate ? formatDate(stats.lastPaymentDate) : 'None'}
+            value={summary?.lastPaymentDate ? formatDate(summary.lastPaymentDate) : 'None'}
+            subtitle={summary?.lastPaymentAmount ? formatNPR(summary.lastPaymentAmount) : undefined}
             icon={CreditCard}
-            iconColor="text-cyan-400"
-            iconBg="bg-cyan-900/30"
+            color="cyan"
           />
         </div>
 
@@ -269,14 +268,14 @@ export default function StudentDashboard() {
                       Totals
                     </td>
                     <td className="px-4 py-3 text-right text-sm font-bold text-red-400">
-                      {formatNPR(stats?.totalCharged)}
+                      {formatNPR(summary?.totalCharged)}
                     </td>
                     <td className="px-4 py-3 text-right text-sm font-bold text-green-400">
-                      {formatNPR(stats?.totalPaid)}
+                      {formatNPR(summary?.totalPaid)}
                     </td>
                     <td className="px-4 py-3 text-right text-sm font-bold">
-                      <span className={parseFloat(stats?.outstandingBalance) > 0 ? 'text-red-400' : 'text-green-400'}>
-                        {formatNPR(stats?.outstandingBalance)}
+                      <span className={hasOutstanding ? 'text-red-400' : 'text-green-400'}>
+                        {formatNPR(outstandingNum)}
                       </span>
                     </td>
                   </tr>

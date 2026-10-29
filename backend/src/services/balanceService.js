@@ -108,6 +108,8 @@ async function getRunningBalance(studentId, options = {}, tx = prisma) {
   let totalPaid = new Prisma.Decimal('0.00');
   let totalCreditNotes = new Prisma.Decimal('0.00');
   let totalRefunded = new Prisma.Decimal('0.00');
+  let lastPaymentDate = null;
+  let lastPaymentAmount = null;
 
   for (const entry of allEntries) {
     const debit = new Prisma.Decimal(entry.debit);
@@ -120,6 +122,8 @@ async function getRunningBalance(studentId, options = {}, tx = prisma) {
       totalCharged = totalCharged.plus(debit);
     } else if (entry.entryType === 'PAYMENT') {
       totalPaid = totalPaid.plus(credit);
+      lastPaymentDate = entry.date;
+      lastPaymentAmount = credit.toFixed(2);
     } else if (entry.entryType === 'CREDIT') {
       totalCreditNotes = totalCreditNotes.plus(credit);
     } else if (entry.entryType === 'REFUND') {
@@ -186,7 +190,9 @@ async function getRunningBalance(studentId, options = {}, tx = prisma) {
       totalPaid: totalPaid.toFixed(2),
       totalCreditNotes: totalCreditNotes.toFixed(2),
       totalRefunded: totalRefunded.toFixed(2),
-      outstandingBalance: computedOutstanding.toFixed(2)
+      outstandingBalance: computedOutstanding.toFixed(2),
+      lastPaymentDate,
+      lastPaymentAmount
     },
     entries: filteredEntries
   };
