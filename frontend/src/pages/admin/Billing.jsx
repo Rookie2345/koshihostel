@@ -283,7 +283,7 @@ export default function Billing() {
                 onChange={(e) => setSelectedYear(Number(e.target.value))}
                 options={[2024, 2025, 2026, 2027, 2028].map((y) => ({
                   value: y,
-                  label: `${y} (${y + 56}/${y + 57} B.S.)`,
+                  label: `${y} (${selectedMonth >= 4 ? y + 57 : y + 56} B.S.)`,
                 }))}
               />
             </div>

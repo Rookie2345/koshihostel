@@ -28,6 +28,7 @@ import {
   Filter,
   Eye,
   EyeOff,
+  PlusCircle,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -105,6 +106,16 @@ export default function StudentDetail() {
     notes: '',
   });
   const [paymentSubmitting, setPaymentSubmitting] = useState(false);
+
+  // Custom Charge Form State
+  const [chargeForm, setChargeForm] = useState({
+    amount: '',
+    date: new Date().toISOString().split('T')[0],
+    chargeType: 'ADJUSTMENT', // 'ADJUSTMENT' | 'DAMAGE' | 'SPECIAL_MEAL' | 'ELECTRICITY' | 'LAUNDRY' | 'LATE_FEE' | 'OTHER'
+    description: '',
+    notes: '',
+  });
+  const [chargeSubmitting, setChargeSubmitting] = useState(false);
 
   // Fee Groups for selection
   const { data: feeGroupsData } = useFeeGroups();
@@ -349,6 +360,65 @@ export default function StudentDetail() {
     }
   };
 
+  // Custom Charge Submit Handler
+  const handleRecordCustomCharge = async (e) => {
+    e.preventDefault();
+    if (!chargeForm.amount || parseFloat(chargeForm.amount) <= 0) {
+      toast.error('Please enter a valid charge amount greater than zero');
+      return;
+    }
+
+    const typeLabels = {
+      ADJUSTMENT: 'Custom Adjustment',
+      DAMAGE: 'Property / Equipment Damage',
+      SPECIAL_MEAL: 'Special Meal / Extra Diet',
+      ELECTRICITY: 'Electricity / AC Surcharge',
+      LAUNDRY: 'Laundry Services',
+      LATE_FEE: 'Late Payment Fine',
+      OTHER: 'Miscellaneous Hostel Charge',
+    };
+
+    const typePrefix = typeLabels[chargeForm.chargeType] || 'Custom Charge';
+    const finalDescription = chargeForm.description.trim()
+      ? `${typePrefix}: ${chargeForm.description.trim()}`
+      : typePrefix;
+
+    try {
+      setChargeSubmitting(true);
+      await apiClient.post('/payments/adjustment', {
+        studentId: student.id,
+        amount: parseFloat(chargeForm.amount),
+        type: 'ADJUSTMENT',
+        isDebit: true, // Debit increases student's balance due
+        date: chargeForm.date ? new Date(chargeForm.date).toISOString() : new Date().toISOString(),
+        description: finalDescription,
+        notes: chargeForm.notes.trim() || undefined,
+      });
+
+      toast.success('Custom fee charge applied successfully!');
+      setChargeForm({
+        amount: '',
+        date: new Date().toISOString().split('T')[0],
+        chargeType: 'ADJUSTMENT',
+        description: '',
+        notes: '',
+      });
+
+      // Invalidate queries so balance and ledger update instantly
+      queryClient.invalidateQueries({ queryKey: STUDENT_KEYS.detail(id) });
+      queryClient.invalidateQueries({ queryKey: ['students', 'statement', id] });
+      queryClient.invalidateQueries({ queryKey: ['students', 'ledger', id] });
+      queryClient.invalidateQueries({ queryKey: ['reports'] });
+
+      // Navigate to ledger tab to view the newly created entry
+      setActiveTab('ledger');
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || 'Failed to apply custom charge');
+    } finally {
+      setChargeSubmitting(false);
+    }
+  };
+
   // Loading Skeleton
   if (isStudentLoading) {
     return (
@@ -564,6 +634,18 @@ export default function StudentDetail() {
         >
           <CreditCard className="w-4 h-4" />
           <span>Record Payment</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('charge')}
+          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-all whitespace-nowrap ${
+            activeTab === 'charge'
+              ? 'border-amber-400 text-amber-400 bg-amber-500/10 rounded-t-lg'
+              : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-navy-800/40 rounded-t-lg'
+          }`}
+        >
+          <PlusCircle className="w-4 h-4" />
+          <span>Custom Charge</span>
         </button>
       </div>
 
@@ -1075,6 +1157,117 @@ export default function StudentDetail() {
                   icon={CheckCircle}
                 >
                   Record Payment
+                </Button>
+              </div>
+            </form>
+          </Card>
+        </div>
+      )}
+
+      {/* TAB 5: CUSTOM CHARGE */}
+      {activeTab === 'charge' && (
+        <div className="max-w-2xl mx-auto">
+          <Card
+            title="Apply Custom Student Charge"
+            subtitle="Bill the student for special services, damages, electricity, or other custom fees"
+          >
+            {/* Quick Balance Banner */}
+            <div className="mb-6 p-4 rounded-xl bg-navy-900/80 border border-navy-700/80 flex items-center justify-between">
+              <div>
+                <p className="text-xs text-slate-400 font-medium">Student Name & Code</p>
+                <p className="text-base font-bold text-slate-100">
+                  {student.fullName}{' '}
+                  <span className="text-cyan-400 font-mono text-sm">({student.studentId})</span>
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-slate-400 font-medium">Current Balance Due</p>
+                <p
+                  className={`text-lg font-bold font-mono ${
+                    outstandingNum > 0 ? 'text-red-400' : 'text-emerald-400'
+                  }`}
+                >
+                  {formatNPR(outstandingNum)}
+                </p>
+              </div>
+            </div>
+
+            <form onSubmit={handleRecordCustomCharge} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Input
+                  label="Charge Amount (NPR)"
+                  type="number"
+                  step="0.01"
+                  required
+                  placeholder="e.g. 1500"
+                  value={chargeForm.amount}
+                  onChange={(e) => setChargeForm({ ...chargeForm, amount: e.target.value })}
+                />
+
+                <Input
+                  label="Charge Date"
+                  type="date"
+                  required
+                  value={chargeForm.date}
+                  onChange={(e) => setChargeForm({ ...chargeForm, date: e.target.value })}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Select
+                  label="Charge Type / Category"
+                  value={chargeForm.chargeType}
+                  onChange={(e) => setChargeForm({ ...chargeForm, chargeType: e.target.value })}
+                  options={[
+                    { value: 'ADJUSTMENT', label: 'Custom Fee Adjustment' },
+                    { value: 'DAMAGE', label: 'Property / Room Damage' },
+                    { value: 'SPECIAL_MEAL', label: 'Special Meal / Extra Diet' },
+                    { value: 'ELECTRICITY', label: 'Electricity / AC Surcharge' },
+                    { value: 'LAUNDRY', label: 'Laundry / Cleaning Service' },
+                    { value: 'LATE_FEE', label: 'Late Payment Fine' },
+                    { value: 'OTHER', label: 'Other Miscellaneous Charge' },
+                  ]}
+                />
+
+                <Input
+                  label="Description / Purpose"
+                  placeholder="e.g. Window glass replacement, AC extra usage"
+                  value={chargeForm.description}
+                  onChange={(e) => setChargeForm({ ...chargeForm, description: e.target.value })}
+                />
+              </div>
+
+              <Input
+                label="Internal Notes / Remarks (Optional)"
+                placeholder="Optional explanation visible to administrative records"
+                value={chargeForm.notes}
+                onChange={(e) => setChargeForm({ ...chargeForm, notes: e.target.value })}
+              />
+
+              <div className="pt-4 flex items-center justify-end gap-3 border-t border-navy-700/60">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() =>
+                    setChargeForm({
+                      amount: '',
+                      date: new Date().toISOString().split('T')[0],
+                      chargeType: 'ADJUSTMENT',
+                      description: '',
+                      notes: '',
+                    })
+                  }
+                >
+                  Clear Form
+                </Button>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  loading={chargeSubmitting}
+                  icon={PlusCircle}
+                  className="bg-amber-600 hover:bg-amber-500 text-white"
+                >
+                  Apply Charge
                 </Button>
               </div>
             </form>

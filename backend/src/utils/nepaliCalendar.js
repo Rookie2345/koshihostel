@@ -35,8 +35,9 @@ const NEPALI_MONTH_NAMES = [
 
 /**
  * Calculate the Bikram Sambat year based on Gregorian year and month.
- * For Gregorian months Jan-Mar (1-3), add 57 years.
- * For Gregorian months Apr-Dec (4-12), add 56 years.
+ * BS year begins in mid-April (month >= 4), when BS year = AD year + 57.
+ * For January through mid-April (month 1-3), BS year = AD year + 56.
+ * Example: 2026 month 10 (October / Kartik) -> 2026 + 57 = 2083 B.S.
  *
  * @param {number} year - Gregorian year (e.g., 2026)
  * @param {number} month - Gregorian month (1-12)
@@ -45,7 +46,7 @@ const NEPALI_MONTH_NAMES = [
 function getNepaliYear(year, month) {
   const m = Number(month);
   const y = Number(year);
-  return m <= 3 ? y + 57 : y + 56;
+  return m >= 4 ? y + 57 : y + 56;
 }
 
 /**
