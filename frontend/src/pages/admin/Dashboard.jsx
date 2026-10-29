@@ -10,6 +10,7 @@ import {
   ArrowRight,
   RefreshCw,
   ExternalLink,
+  Phone,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -84,7 +85,7 @@ export default function Dashboard() {
   ];
 
   const recentTransactions = dashboard?.recentTransactions || [];
-  const topDuesStudents = dashboard?.topDuesStudents || dashboard?.topOutstanding || [];
+  const topDuesStudents = dashboard?.topDuesStudents || dashboard?.topOutstandingStudents || dashboard?.topOutstanding || [];
 
   return (
     <div className="space-y-6">
@@ -292,7 +293,7 @@ export default function Dashboard() {
         {/* Recent Transactions */}
         <Card
           title="Recent Transactions"
-          subtitle="Last 10 payments and fee debits"
+          subtitle="Latest fee debits, charges, and payment entries"
           action={
             <Button
               variant="ghost"
@@ -307,34 +308,106 @@ export default function Dashboard() {
             <Skeleton count={5} className="h-10 my-2" />
           ) : recentTransactions.length > 0 ? (
             <Table
-              headers={['Date', 'Student', 'Type', { label: 'Amount', align: 'right' }]}
+              headers={['Date', 'Student', 'Type', { label: 'Amount', align: 'right' }, { label: 'Action', align: 'center' }]}
             >
-              {recentTransactions.slice(0, 10).map((tx, idx) => (
-                <TableRow key={tx.id || idx}>
-                  <TableCell className="text-xs text-slate-400">
-                    {formatDate(tx.date || tx.createdAt)}
-                  </TableCell>
-                  <TableCell>
-                    <p className="font-medium text-slate-200">
-                      {tx.studentName || tx.student?.fullName || 'Student'}
-                    </p>
-                    {tx.roomNumber && (
-                      <span className="text-[11px] text-slate-400">Room {tx.roomNumber}</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={tx.type || 'PAYMENT'} size="xs">
-                      {tx.type || 'Payment'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell align="right" className="font-semibold text-slate-100">
-                    <span className={tx.type === 'PAYMENT' || tx.credit ? 'text-emerald-400' : 'text-slate-200'}>
-                      {tx.type === 'PAYMENT' || tx.credit ? '+' : ''}
-                      {formatNPR(tx.amount || tx.credit || tx.debit)}
-                    </span>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {recentTransactions.slice(0, 10).map((tx, idx) => {
+                const entryType = tx.entryType || tx.type || 'PAYMENT';
+                const isCredit = parseFloat(tx.credit || 0) > 0 || entryType === 'PAYMENT';
+                const amount = isCredit
+                  ? parseFloat(tx.credit || tx.amount || 0)
+                  : parseFloat(tx.debit || tx.amount || 0);
+
+                let badgeLabel = entryType;
+                let badgeVariant = entryType;
+                let detailText = tx.description || '';
+
+                if (entryType === 'ADJUSTMENT' && tx.description) {
+                  if (tx.description.includes(':')) {
+                    const parts = tx.description.split(':');
+                    badgeLabel = parts[0].trim();
+                    detailText = parts.slice(1).join(':').trim();
+                  } else {
+                    badgeLabel = tx.description.trim();
+                    detailText = '';
+                  }
+                  badgeVariant = 'ADJUSTMENT';
+                } else if (entryType === 'MONTHLY_FEE') {
+                  badgeLabel = 'Monthly Fee';
+                  badgeVariant = 'MONTHLY_FEE';
+                  detailText = tx.description || 'Hostel residency billing';
+                } else if (entryType === 'PAYMENT') {
+                  badgeLabel = 'Payment';
+                  badgeVariant = 'PAYMENT';
+                  detailText = tx.paymentMethod
+                    ? `${tx.paymentMethod}${tx.receiptNumber ? ` • #${tx.receiptNumber}` : ''}`
+                    : tx.receiptNumber
+                    ? `Receipt #${tx.receiptNumber}`
+                    : '';
+                }
+
+                const studentId = tx.student?.id || tx.studentId;
+                const studentName = tx.student?.fullName || tx.studentName || 'Student';
+                const roomNo = tx.student?.roomNumber || tx.roomNumber;
+                const studentCode = tx.student?.studentId || tx.studentCode;
+
+                return (
+                  <TableRow key={tx.id || idx}>
+                    <TableCell className="text-xs text-slate-400 whitespace-nowrap">
+                      <div>{formatDate(tx.date || tx.createdAt)}</div>
+                      {tx.recordedBy && (
+                        <div className="text-[10px] text-slate-500 mt-0.5">by {tx.recordedBy}</div>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <button
+                        onClick={() => studentId && navigate(`/admin/students/${studentId}`)}
+                        className="text-left font-medium text-slate-200 hover:text-cyan-400 transition-colors block truncate max-w-[140px] sm:max-w-[180px]"
+                        title={studentName}
+                      >
+                        {studentName}
+                      </button>
+                      <div className="text-[11px] text-slate-400 flex items-center gap-1.5 mt-0.5">
+                        {studentCode && <span>ID: {studentCode}</span>}
+                        {roomNo && (
+                          <>
+                            <span>•</span>
+                            <span>Room {roomNo}</span>
+                          </>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={badgeVariant} size="xs">
+                        {badgeLabel}
+                      </Badge>
+                      {detailText && (
+                        <p className="text-[11px] text-slate-400 truncate max-w-[130px] sm:max-w-[180px] mt-1" title={detailText}>
+                          {detailText}
+                        </p>
+                      )}
+                    </TableCell>
+                    <TableCell align="right" className="font-semibold text-slate-100 whitespace-nowrap">
+                      <span className={isCredit ? 'text-emerald-400' : 'text-amber-300'}>
+                        {isCredit ? '+' : '-'} {formatNPR(amount)}
+                      </span>
+                      {tx.balanceAfter !== undefined && tx.balanceAfter !== null && (
+                        <div className="text-[10px] text-slate-400 font-normal mt-0.5">
+                          Bal: {formatNPR(tx.balanceAfter)}
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell align="center">
+                      <button
+                        onClick={() => studentId && navigate(`/admin/students/${studentId}?tab=ledger`)}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-cyan-400 hover:bg-cyan-500/10 transition-colors"
+                        title="View Student Ledger"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                      </button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </Table>
           ) : (
             <EmptyState
@@ -344,10 +417,10 @@ export default function Dashboard() {
           )}
         </Card>
 
-        {/* Outstanding Dues Top 5 */}
+        {/* Highest Outstanding Balances */}
         <Card
           title="Highest Outstanding Balances"
-          subtitle="Top students requiring fee collection follow-up"
+          subtitle={`Top ${Math.min(topDuesStudents.length, 10)} students with highest unpaid balances (${studentsWithDues} total with dues)`}
           action={
             <Button
               variant="ghost"
@@ -362,33 +435,84 @@ export default function Dashboard() {
             <Skeleton count={5} className="h-10 my-2" />
           ) : topDuesStudents.length > 0 ? (
             <Table
-              headers={['Student', 'Room', { label: 'Balance Due', align: 'right' }, { label: 'Action', align: 'center' }]}
+              headers={['#', 'Student', 'Room', 'Status', { label: 'Balance Due', align: 'right' }, { label: 'Action', align: 'center' }]}
             >
-              {topDuesStudents.slice(0, 5).map((student, idx) => (
-                <TableRow key={student.id || idx}>
-                  <TableCell>
-                    <p className="font-medium text-slate-100">
-                      {student.fullName || student.name}
-                    </p>
-                    <span className="text-xs text-slate-400">ID: {student.studentId || student.id}</span>
-                  </TableCell>
-                  <TableCell className="text-xs text-slate-300">
-                    {student.roomNumber || student.room || '-'}
-                  </TableCell>
-                  <TableCell align="right" className="font-bold text-red-400">
-                    {formatNPR(student.outstandingBalance || student.balance || student.outstanding)}
-                  </TableCell>
-                  <TableCell align="center">
-                    <button
-                      onClick={() => navigate(`/admin/students/${student.id || student.studentId}`)}
-                      className="p-1.5 rounded-lg text-cyan-400 hover:bg-cyan-500/10 transition-colors"
-                      title="View Student Ledger"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                    </button>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {topDuesStudents.slice(0, 10).map((student, idx) => {
+                const studentId = student.id || student.studentId;
+                const outstanding = parseFloat(student.outstandingBalance || student.balance || student.outstanding || 0);
+
+                return (
+                  <TableRow key={student.id || idx}>
+                    <TableCell className="w-7">
+                      <span
+                        className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${
+                          idx === 0
+                            ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                            : idx === 1
+                            ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                            : idx === 2
+                            ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
+                            : 'bg-slate-800 text-slate-400'
+                        }`}
+                      >
+                        {idx + 1}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <button
+                        onClick={() => navigate(`/admin/students/${studentId}`)}
+                        className="text-left font-medium text-slate-100 hover:text-cyan-400 transition-colors block truncate max-w-[130px] sm:max-w-[170px]"
+                        title={student.fullName || student.name}
+                      >
+                        {student.fullName || student.name}
+                      </button>
+                      <div className="text-[11px] text-slate-400 flex items-center gap-1.5 mt-0.5">
+                        <span>ID: {student.studentId || student.id}</span>
+                        {student.phone && (
+                          <>
+                            <span>•</span>
+                            <span className="flex items-center gap-0.5 text-slate-400">
+                              <Phone className="w-3 h-3 text-slate-400" />
+                              {student.phone}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-xs text-slate-300 whitespace-nowrap">
+                      {student.roomNumber || student.room ? `Room ${student.roomNumber || student.room}` : '-'}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={student.status || 'ACTIVE'} size="xs">
+                        {student.status || 'ACTIVE'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell align="right" className="font-bold text-rose-400 text-sm whitespace-nowrap">
+                      {formatNPR(outstanding)}
+                    </TableCell>
+                    <TableCell align="center">
+                      <div className="flex items-center justify-center gap-1">
+                        <Button
+                          variant="secondary"
+                          size="xs"
+                          onClick={() => navigate(`/admin/students/${studentId}?tab=payment`)}
+                          className="px-2 py-1 text-xs"
+                          title="Record Payment"
+                        >
+                          Collect
+                        </Button>
+                        <button
+                          onClick={() => navigate(`/admin/students/${studentId}`)}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-cyan-400 hover:bg-cyan-500/10 transition-colors"
+                          title="View Student Profile"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </Table>
           ) : (
             <EmptyState

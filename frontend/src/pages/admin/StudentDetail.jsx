@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft,
@@ -62,8 +62,16 @@ export default function StudentDetail() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  // Active Tab: 'profile' | 'financial' | 'ledger' | 'payment'
-  const [activeTab, setActiveTab] = useState('profile');
+  const [searchParams] = useSearchParams();
+  const initialTab = searchParams.get('tab') || 'profile';
+  const [activeTab, setActiveTab] = useState(initialTab);
+
+  React.useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam && ['profile', 'financial', 'ledger', 'payment', 'charge'].includes(tabParam)) {
+      setActiveTab(tabParam);
+    }
+  }, [searchParams]);
 
   // Ledger Filters
   const [ledgerStartDate, setLedgerStartDate] = useState('');

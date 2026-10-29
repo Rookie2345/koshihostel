@@ -22,7 +22,8 @@ async function getDashboardStats(req, res) {
     allStudents,
     currentMonthCharges,
     currentMonthPayments,
-    recentTransactions
+    recentTransactions,
+    topDuesStudents
   ] = await Promise.all([
     prisma.student.count({ where: { status: 'ACTIVE' } }),
     prisma.student.count({ where: { status: 'INACTIVE' } }),
@@ -71,6 +72,24 @@ async function getDashboardStats(req, res) {
           }
         }
       }
+    }),
+    prisma.student.findMany({
+      where: {
+        outstandingBalance: { gt: 0 }
+      },
+      take: 10,
+      orderBy: {
+        outstandingBalance: 'desc'
+      },
+      select: {
+        id: true,
+        studentId: true,
+        fullName: true,
+        roomNumber: true,
+        phone: true,
+        status: true,
+        outstandingBalance: true
+      }
     })
   ]);
 
@@ -116,7 +135,45 @@ async function getDashboardStats(req, res) {
     currentMonthCollected: currentMonthCollected.toFixed(2),
     thisMonthCollected: currentMonthCollected.toFixed(2),
     currentMonthNepali: getNepaliMonth(currentYear, currentMonth + 1),
-    recentTransactions
+    recentTransactions: (recentTransactions || []).map((tx) => ({
+      id: tx.id,
+      studentId: tx.studentId,
+      studentName: tx.student?.fullName || 'Student',
+      studentCode: tx.student?.studentId || '',
+      roomNumber: tx.student?.roomNumber || '',
+      student: tx.student,
+      date: tx.date,
+      createdAt: tx.createdAt,
+      entryType: tx.entryType,
+      type: tx.entryType,
+      debit: parseFloat(tx.debit || 0),
+      credit: parseFloat(tx.credit || 0),
+      amount: parseFloat(tx.credit > 0 ? tx.credit : tx.debit),
+      balanceAfter: parseFloat(tx.balanceAfter || 0),
+      description: tx.description,
+      referenceNumber: tx.referenceNumber,
+      receiptNumber: tx.receiptNumber,
+      paymentMethod: tx.paymentMethod,
+      recordedBy: tx.recorder?.username || null
+    })),
+    topDuesStudents: (topDuesStudents || []).map((s) => ({
+      id: s.id,
+      studentId: s.studentId,
+      fullName: s.fullName,
+      roomNumber: s.roomNumber,
+      phone: s.phone,
+      status: s.status,
+      outstandingBalance: parseFloat(s.outstandingBalance || 0)
+    })),
+    topOutstandingStudents: (topDuesStudents || []).map((s) => ({
+      id: s.id,
+      studentId: s.studentId,
+      fullName: s.fullName,
+      roomNumber: s.roomNumber,
+      phone: s.phone,
+      status: s.status,
+      outstandingBalance: parseFloat(s.outstandingBalance || 0)
+    }))
   });
 }
 
