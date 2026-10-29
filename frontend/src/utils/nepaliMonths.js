@@ -28,6 +28,27 @@ export const GREGORIAN_MONTHS = [
   { id: 12, name: 'December' },
 ];
 
+// Gregorian Month (1-12) to Approximate Nepali Month
+export const GREGORIAN_TO_NEPALI_MAP = {
+  1: { id: 10, name: 'Magh', nepaliName: 'माघ' },
+  2: { id: 11, name: 'Falgun', nepaliName: 'फागुन' },
+  3: { id: 12, name: 'Chaitra', nepaliName: 'चैत' },
+  4: { id: 1, name: 'Baisakh', nepaliName: 'बैशाख' },
+  5: { id: 2, name: 'Jestha', nepaliName: 'जेठ' },
+  6: { id: 3, name: 'Ashadh', nepaliName: 'असार' },
+  7: { id: 4, name: 'Shrawan', nepaliName: 'साउन' },
+  8: { id: 5, name: 'Bhadra', nepaliName: 'भदौ' },
+  9: { id: 6, name: 'Ashwin', nepaliName: 'असोज' },
+  10: { id: 7, name: 'Kartik', nepaliName: 'कार्तिक' },
+  11: { id: 8, name: 'Mangsir', nepaliName: 'मंसिर' },
+  12: { id: 9, name: 'Poush', nepaliName: 'पुष' }
+};
+
+export function getApproxNepaliMonth(gregorianMonth) {
+  const m = parseInt(gregorianMonth, 10);
+  return GREGORIAN_TO_NEPALI_MAP[m] || { id: m, name: '', nepaliName: '' };
+}
+
 export function getNepaliMonthName(monthIndex) {
   const num = parseInt(monthIndex, 10);
   const found = NEPALI_MONTHS.find((m) => m.id === num);

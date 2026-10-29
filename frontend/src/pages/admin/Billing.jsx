@@ -40,7 +40,7 @@ import Alert from '../../components/ui/Alert';
 
 import { formatNPR } from '../../utils/formatCurrency';
 import { formatDate } from '../../utils/formatDate';
-import { NEPALI_MONTHS, GREGORIAN_MONTHS, getNepaliMonthName } from '../../utils/nepaliMonths';
+import { NEPALI_MONTHS, GREGORIAN_MONTHS, getNepaliMonthName, getApproxNepaliMonth } from '../../utils/nepaliMonths';
 
 export default function Billing() {
   const queryClient = useQueryClient();
@@ -269,10 +269,10 @@ export default function Billing() {
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(Number(e.target.value))}
                 options={GREGORIAN_MONTHS.map((m) => {
-                  const nepaliApprox = NEPALI_MONTHS.find((nm) => nm.id === m.id);
+                  const nepaliApprox = getApproxNepaliMonth(m.id);
                   return {
                     value: m.id,
-                    label: `${m.name} (${nepaliApprox ? nepaliApprox.name : ''})`,
+                    label: `${m.name} (${nepaliApprox.name} / ${nepaliApprox.nepaliName})`,
                   };
                 })}
               />
@@ -659,7 +659,7 @@ export default function Billing() {
               <TableCell className="font-bold text-slate-100">
                 <div className="flex items-center gap-2">
                   <Receipt className="w-4 h-4 text-cyan-400 shrink-0" />
-                  <span>{period.nepaliMonth || getNepaliMonthName(period.month)}</span>
+                  <span>{period.nepaliMonth || getApproxNepaliMonth(period.month).name}</span>
                 </div>
               </TableCell>
               <TableCell className="font-mono text-slate-300">

@@ -214,22 +214,37 @@ export default function StudentDashboard() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#1e2d45]">
-                  {entries.map((entry) => (
-                    <tr key={entry.id} className="hover:bg-[#141f38]/50 transition-colors">
-                      <td className="px-4 py-3 text-sm text-slate-300 whitespace-nowrap">
-                        {formatDate(entry.date)}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-slate-400 hidden md:table-cell whitespace-nowrap">
-                        {entry.billingPeriod?.nepaliMonth || '—'}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${ENTRY_TYPE_COLORS[entry.entryType] || 'bg-slate-800 text-slate-400'}`}>
-                          {ENTRY_TYPE_LABELS[entry.entryType] || entry.entryType}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-slate-400 hidden lg:table-cell max-w-xs truncate">
-                        {entry.description}
-                      </td>
+                  {entries.map((entry) => {
+                    let displayType = ENTRY_TYPE_LABELS[entry.entryType] || entry.entryType;
+                    let displayDesc = entry.description;
+
+                    if (entry.entryType === 'ADJUSTMENT' && entry.description) {
+                      if (entry.description.includes(':')) {
+                        const parts = entry.description.split(':');
+                        displayType = parts[0].trim();
+                        displayDesc = parts.slice(1).join(':').trim() || parts[0].trim();
+                      } else {
+                        displayType = entry.description.trim();
+                        displayDesc = entry.description.trim();
+                      }
+                    }
+
+                    return (
+                      <tr key={entry.id} className="hover:bg-[#141f38]/50 transition-colors">
+                        <td className="px-4 py-3 text-sm text-slate-300 whitespace-nowrap">
+                          {formatDate(entry.date)}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-slate-400 hidden md:table-cell whitespace-nowrap">
+                          {entry.billingPeriod?.nepaliMonth || '—'}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${ENTRY_TYPE_COLORS[entry.entryType] || 'bg-slate-800 text-slate-400'}`}>
+                            {displayType}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-slate-400 hidden lg:table-cell max-w-xs truncate">
+                          {displayDesc}
+                        </td>
                       <td className="px-4 py-3 text-sm text-right whitespace-nowrap">
                         {parseFloat(entry.debit) > 0 ? (
                           <span className="text-red-400 font-medium flex items-center justify-end gap-1">
@@ -256,7 +271,8 @@ export default function StudentDashboard() {
                         </span>
                       </td>
                     </tr>
-                  ))}
+                  );
+                })}
                 </tbody>
                 {/* Summary Footer */}
                 <tfoot className="bg-[#080d1a]/60 border-t-2 border-[#2a3d5c]">

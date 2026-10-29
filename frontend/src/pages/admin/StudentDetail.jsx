@@ -971,14 +971,31 @@ export default function StudentDetail() {
               const creditNum = parseFloat(row.credit || 0);
               const balanceNum = parseFloat(row.balanceAfter ?? row.runningBalance ?? 0);
 
+              // If entry is an ADJUSTMENT and description has a custom prefix (e.g. "Damage: Broken door" or "Damage")
+              let displayType = row.entryType;
+              let displayDesc = row.description;
+              let badgeVariant = row.entryType;
+
+              if (row.entryType === 'ADJUSTMENT' && row.description) {
+                if (row.description.includes(':')) {
+                  const parts = row.description.split(':');
+                  displayType = parts[0].trim();
+                  displayDesc = parts.slice(1).join(':').trim() || parts[0].trim();
+                } else {
+                  displayType = row.description.trim();
+                  displayDesc = row.description.trim();
+                }
+                badgeVariant = 'ADJUSTMENT';
+              }
+
               return (
                 <TableRow key={row.id}>
                   <TableCell className="font-mono text-xs">{formatDate(row.date)}</TableCell>
                   <TableCell>
-                    <Badge variant={row.entryType}>{row.entryType}</Badge>
+                    <Badge variant={badgeVariant}>{displayType}</Badge>
                   </TableCell>
                   <TableCell>
-                    <div className="text-slate-200 text-sm font-medium">{row.description}</div>
+                    <div className="text-slate-200 text-sm font-medium">{displayDesc}</div>
                     {(row.referenceNumber || row.receiptNumber || row.paymentMethod) && (
                       <div className="text-xs text-slate-400 mt-0.5 flex gap-2">
                         {row.paymentMethod && <span>Method: {row.paymentMethod}</span>}
