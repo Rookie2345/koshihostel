@@ -760,19 +760,23 @@ export default function Reports() {
               <div className="p-6 sm:p-8 rounded-2xl bg-navy-800 border border-navy-700/80 shadow-xl print-card">
                 {/* Official Statement Header */}
                 <div className="flex flex-col sm:flex-row justify-between items-start pb-6 border-b border-navy-700/80 print:border-slate-300 gap-4">
-                  <div>
-                    <h2 className="text-2xl font-black tracking-tight text-white print-text-dark">
-                      KOSHI HOSTEL
-                    </h2>
-                    <p className="text-xs text-cyan-400 font-semibold print-text-dark">
-                      Premium Student Residence
-                    </p>
-                    <p className="text-xs text-slate-400 mt-1 print-text-muted">
-                      Biratnagar-10, Morang, Nepal | Tel: +977-21-523456
-                    </p>
-                    <p className="text-xs text-slate-400 print-text-muted">
-                      Email: info@koshihostel.edu.np
-                    </p>
+                  <div className="flex items-center gap-4">
+                    <img
+                      src="/logo.png"
+                      alt="Koshi Hostel Logo"
+                      className="w-16 h-16 object-contain rounded-xl bg-white/5 border border-cyan-500/20 p-1"
+                    />
+                    <div>
+                      <h2 className="text-2xl font-black tracking-tight text-white print-text-dark">
+                        KOSHI HOSTEL
+                      </h2>
+                      <p className="text-xs text-cyan-400 font-semibold print-text-dark">
+                        ESTD 2079 • Biratnagar-10, Morang, Nepal
+                      </p>
+                      <p className="text-xs text-slate-400 mt-0.5 print-text-muted">
+                        Tel: +977-21-523456 | Email: info@koshihostel.edu.np
+                      </p>
+                    </div>
                   </div>
 
                   <div className="sm:text-right">

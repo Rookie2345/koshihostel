@@ -67,8 +67,17 @@ export default function Navbar({ onToggleSidebar, title }) {
             <Menu className="w-5 h-5" />
           </button>
 
+          <div className="flex items-center gap-2.5 lg:hidden">
+            <img
+              src="/logo.png"
+              alt="Koshi Hostel"
+              className="w-8 h-8 rounded-lg object-contain bg-white/5 border border-cyan-500/30 p-0.5"
+            />
+            <span className="text-sm font-bold text-white">Koshi Hostel</span>
+          </div>
+
           {title && (
-            <h2 className="text-lg font-bold text-slate-100 tracking-tight">
+            <h2 className="hidden lg:block text-lg font-bold text-slate-100 tracking-tight">
               {title}
             </h2>
           )}
@@ -109,6 +118,13 @@ export default function Navbar({ onToggleSidebar, title }) {
         subtitle="Change admin username or update login password"
         maxWidth="max-w-md"
       >
+        <div className="flex items-center gap-3 mb-4 p-3 rounded-xl bg-navy-900/60 border border-navy-700/60">
+          <img src="/logo.png" alt="Koshi Hostel" className="w-12 h-12 object-contain rounded-lg" />
+          <div>
+            <h4 className="text-sm font-bold text-white">Koshi Hostel</h4>
+            <p className="text-[11px] text-cyan-400">ESTD 2079 • Biratnagar</p>
+          </div>
+        </div>
         <form onSubmit={handleSaveProfile} className="space-y-4">
           <Input
             label="Admin Username"

@@ -77,19 +77,29 @@ export default function StudentDashboard() {
   return (
     <div className="min-h-screen bg-[#0a0f1e] text-slate-100 print:bg-white print:text-black">
       {/* Print Header */}
-      <div className="hidden print:block mb-6 border-b-2 border-gray-300 pb-4">
-        <h1 className="text-2xl font-bold text-gray-900">Koshi Hostel</h1>
-        <p className="text-gray-600">Biratnagar-10, Morang, Nepal</p>
-        <p className="text-gray-500 text-sm">Account Statement — Generated: {formatDate(new Date())}</p>
+      <div className="hidden print:flex items-center justify-between mb-6 border-b-2 border-gray-300 pb-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Koshi Hostel</h1>
+          <p className="text-gray-600">ESTD 2079 • Biratnagar-10, Morang, Nepal</p>
+          <p className="text-gray-500 text-sm">Account Statement — Generated: {formatDate(new Date())}</p>
+        </div>
+        <img src="/logo.png" alt="Koshi Hostel" className="w-20 h-20 object-contain" />
       </div>
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-6">
 
         {/* Header */}
         <div className="flex items-start justify-between print:hidden">
-          <div>
-            <h1 className="text-2xl font-bold text-white">My Account</h1>
-            <p className="text-slate-400 text-sm mt-1">View your financial history and balance</p>
+          <div className="flex items-center gap-3.5">
+            <img
+              src="/logo.png"
+              alt="Koshi Hostel"
+              className="w-12 h-12 rounded-xl object-contain bg-white/5 border border-cyan-500/30 p-1 shadow-md shadow-cyan-500/10"
+            />
+            <div>
+              <h1 className="text-2xl font-bold text-white">My Account</h1>
+              <p className="text-slate-400 text-xs sm:text-sm mt-0.5">Koshi Hostel • Resident Portal</p>
+            </div>
           </div>
           <button
             onClick={handlePrint}

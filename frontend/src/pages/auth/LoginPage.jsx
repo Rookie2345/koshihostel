@@ -69,14 +69,18 @@ export default function LoginPage() {
         <div className="rounded-2xl bg-[#0f1629]/90 border border-[#1e2d45] p-8 shadow-2xl backdrop-blur-xl transition-all duration-300 hover:border-cyan-500/30">
           {/* Logo & Header */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-cyan-500 to-blue-600 shadow-xl shadow-cyan-500/25 mb-4 transform hover:scale-105 transition-transform duration-200">
-              <Building2 className="w-8 h-8 text-navy-950 font-bold" />
+            <div className="inline-flex items-center justify-center w-24 h-24 rounded-2xl bg-[#080d1a] border border-cyan-500/30 shadow-xl shadow-cyan-500/20 mb-4 p-1 transform hover:scale-105 transition-transform duration-200">
+              <img
+                src="/logo.png"
+                alt="Koshi Hostel Logo"
+                className="w-full h-full object-contain rounded-xl"
+              />
             </div>
             <h1 className="text-2xl font-bold text-slate-100 tracking-tight">
               Koshi Hostel
             </h1>
             <p className="text-xs text-cyan-400 font-medium mt-1">
-              Biratnagar-10, Morang, Nepal
+              ESTD 2079 • Biratnagar-10, Morang, Nepal
             </p>
             <p className="text-xs text-slate-400 mt-2">
               Sign in to manage hostel accounts and billing

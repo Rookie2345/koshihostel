@@ -1002,10 +1002,13 @@ export default function StudentDetail() {
           {/* Printable Statement Header (Visible only when printing or inside printable container) */}
           <div className="hidden print:block mb-6 p-4 border-b border-slate-300">
             <div className="flex justify-between items-start">
-              <div>
-                <h2 className="text-xl font-bold text-slate-900">KOSHI HOSTEL</h2>
-                <p className="text-xs text-slate-600">Biratnagar-10, Morang, Nepal | Tel: +977-21-523456</p>
-                <h3 className="text-base font-semibold text-slate-800 mt-2">STUDENT STATEMENT OF ACCOUNT</h3>
+              <div className="flex items-center gap-3">
+                <img src="/logo.png" alt="Koshi Hostel Logo" className="w-16 h-16 object-contain" />
+                <div>
+                  <h2 className="text-xl font-bold text-slate-900">KOSHI HOSTEL</h2>
+                  <p className="text-xs text-slate-600">ESTD 2079 • Biratnagar-10, Morang, Nepal | Tel: +977-21-523456</p>
+                  <h3 className="text-base font-semibold text-slate-800 mt-1">STUDENT STATEMENT OF ACCOUNT</h3>
+                </div>
               </div>
               <div className="text-right text-xs text-slate-600">
                 <p>Date: {formatDate(new Date())}</p>

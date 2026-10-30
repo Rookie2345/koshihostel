@@ -47,14 +47,16 @@ export default function Sidebar({ isOpen, onClose }) {
         {/* Brand header */}
         <div className="flex items-center justify-between h-16 px-5 border-b border-navy-700/60">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-navy-950 shadow-lg shadow-cyan-500/20">
-              <Building2 className="w-5 h-5 font-bold" />
-            </div>
+            <img
+              src="/logo.png"
+              alt="Koshi Hostel Logo"
+              className="w-10 h-10 rounded-xl object-contain bg-white/5 border border-cyan-500/30 p-0.5 shadow-md shadow-cyan-500/10"
+            />
             <div>
               <h1 className="text-base font-bold text-white tracking-wide leading-tight">
                 Koshi Hostel
               </h1>
-              <p className="text-[10px] text-cyan-400 font-medium">Biratnagar-10, Morang</p>
+              <p className="text-[10px] text-cyan-400 font-medium">ESTD 2079 • Biratnagar</p>
             </div>
           </div>
           <button
